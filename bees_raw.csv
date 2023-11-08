@@ -1,0 +1,303 @@
+Session,Treetype,Location,Trap,Colour,Species,Genus,Speciesname,Sex,Count
+1,B,B2,1,B,Andrena_angustior ,Andrena,angustior ,V,1
+1,B,B2,1,W,Andrena_mitis,Andrena,mitis,V,1
+1,B,B2,1,W,Andrena_helvola,Andrena,helvola,V,1
+1,B,B2,1,Y,Nomada_panzeri,Nomada,panzeri,M,1
+1,B,B2,1,Y,Andrena_fulva,Andrena,fulva,V,1
+1,B,B2,1,Y,Andrena_haemorrhoa,Andrena,haemorrhoa,V,1
+1,B,B2,1,Y,Andrena_helvola,Andrena,helvola,V,1
+1,B,B2,1,Y,Andrena_haemorrhoa,Andrena,haemorrhoa,M,2
+1,B,B2,1,Y,Andrena_helvola,Andrena,helvola,M,1
+1,B,B2,1,Y,Andrena_scotica,Andrena,scotica,V,1
+1,B,B2,2,B,Bombus _lapidarius,Bombus ,lapidarius,V,1
+1,B,B2,2,B,Andrena_haemorrhoa,Andrena,haemorrhoa,M,1
+1,B,B2,2,W,Lasioglossum_malachurum,Lasioglossum,malachurum,V,1
+1,B,B2,2,W,Andrena_helvola,Andrena,helvola,V,1
+1,B,B2,2,W,Andrena_helvola,Andrena,helvola,M,1
+1,B,B2,2,W,Andrena_haemorrhoa,Andrena,haemorrhoa,M,1
+1,B,B2,2,W,Nomada_fabriciana,Nomada,fabriciana,V,1
+1,B,B2,2,Y,Andrena_fulva,Andrena,fulva,V,1
+1,B,B2,2,Y,Andrena_helvola,Andrena,helvola,V,3
+1,B,B2,2,Y,Andrena_helvola,Andrena,helvola,M,1
+1,B,B2,2,Y,Nomada_flava,Nomada,flava,V,1
+1,B,B2,2,Y,Nomada_panzeri,Nomada,panzeri,M,1
+1,B,B3,1,Y,Andrena_haemorrhoa,Andrena,haemorrhoa,M,1
+1,B,B3,1,Y,Lasioglossum_morio,Lasioglossum,morio,V,1
+1,B,B3,2,B,Nomada_panzeri,Nomada,panzeri,V,1
+1,B,B3,2,Y,Andrena_scotica,Andrena,scotica,M,1
+1,B,B4,1,W,Andrena_dorsata,Andrena,dorsata,V,1
+1,B,B4,1,Y,Andrena_haemorrhoa,Andrena,haemorrhoa,M,3
+1,B,B4,2,Y,Andrena_haemorrhoa,Andrena,haemorrhoa,V,1
+1,B,B5,1,W,Andrena_haemorrhoa,Andrena,haemorrhoa,M,1
+1,B,B5,1,Y,Andrena_haemorrhoa,Andrena,haemorrhoa,V,1
+1,B,B5,1,Y,Lasioglossum_calceatum,Lasioglossum,calceatum,V,1
+1,B,B5,2,Y,Andrena_haemorrhoa,Andrena,haemorrhoa,M,1
+1,B,B6,1,B,Bombus _vestalis,Bombus ,vestalis,V,1
+1,B,B6,1,W,Andrena_haemorrhoa,Andrena,haemorrhoa,M,1
+1,B,B6,1,Y,Andrena_haemorrhoa,Andrena,haemorrhoa,V,1
+1,B,B6,1,Y,Andrena_haemorrhoa,Andrena,haemorrhoa,M,1
+1,B,B6,1,Y,Andrena_helvola,Andrena,helvola,M,1
+1,B,B6,2,Y,Andrena_haemorrhoa,Andrena,haemorrhoa,V,2
+1,B,B8,1,B,Bombus _terresstris,Bombus ,terresstris,V,1
+1,B,B8,1,W,Andrena_fulva,Andrena,fulva,V,1
+1,B,B8,1,W,Andrena_haemorrhoa,Andrena,haemorrhoa,M,5
+1,B,B8,1,W,Bombus _terresstris,Bombus ,terresstris,V,2
+1,B,B8,1,Y,Andrena_haemorrhoa,Andrena,haemorrhoa,M,2
+1,B,B8,2,Y,Andrena_haemorrhoa,Andrena,haemorrhoa,V,1
+1,B,B9,1,B,Andrena_helvola,Andrena,helvola,M,1
+1,B,B9,1,W,Andrena_fulva,Andrena,fulva,V,1
+1,B,B9,1,Y,Andrena_fulva,Andrena,fulva,V,1
+1,B,B9,1,Y,Andrena_haemorrhoa,Andrena,haemorrhoa,M,1
+1,B,B9,1,Y,Andrena_haemorrhoa,Andrena,haemorrhoa,V,1
+1,B,B9,1,Y,Andrena_dorsata,Andrena,dorsata,V,1
+1,B,B9,1,Y,Nomada_leucophthalma,Nomada,leucophthalma,M,1
+1,B,B9,2,W,Andrena_helvola,Andrena,helvola,M,1
+1,B,B9,2,W,Nomada_panzeri,Nomada,panzeri,V,1
+1,B,B9,2,Y,Andrena_helvola,Andrena,helvola,V,1
+1,B,B9,2,Y,Andrena_helvola,Andrena,helvola,M,5
+1,O,O3,1,Y,Andrena_haemorrhoa,Andrena,haemorrhoa,V,1
+1,O,O3,1,B,Bombus _pascuorum,Bombus ,pascuorum,V,1
+1,O,O3,2,W,Andrena_haemorrhoa,Andrena,haemorrhoa,M,1
+1,O,O3,1,W,Bombus _terresstris,Bombus ,terresstris,V,2
+1,O,O3,2,W,Andrena_haemorrhoa,Andrena,haemorrhoa,V,1
+1,O,O3,2,Y,Andrena_haemorrhoa,Andrena,haemorrhoa,M,1
+1,O,O3,2,W,Nomada_zonata,Nomada,zonata,V,1
+1,O,O3,2,B,Bombus _pratorum,Bombus ,pratorum,V,1
+1,O,O3,2,Y,Bombus _terresstris,Bombus ,terresstris,V,1
+1,O,O4,1,B,Andrena_haemorrhoa,Andrena,haemorrhoa,M,1
+1,O,O4,1,W,Andrena_haemorrhoa,Andrena,haemorrhoa,M,1
+1,O,O4,1,Y,Andrena_haemorrhoa,Andrena,haemorrhoa,M,4
+1,O,O4,1,W,Lasioglossum_malachurum,Lasioglossum,malachurum,V,1
+1,O,O4,2,W,Andrena_haemorrhoa,Andrena,haemorrhoa,M,1
+1,O,O4,1,Y,Andrena_helvola,Andrena,helvola,V,1
+1,O,O4,1,Y,Micrandrena_spec.,Micrandrena,spec.,V,1
+1,O,O4,2,Y,Andrena_haemorrhoa,Andrena,haemorrhoa,V,2
+1,O,O4,2,W,Andrena_fulva,Andrena,fulva,M,1
+1,O,O4,2,Y,Andrena_haemorrhoa,Andrena,haemorrhoa,M,4
+1,O,O4,2,Y,Andrena_helvola,Andrena,helvola,V,1
+1,O,O4,2,W,Nomada_zonata,Nomada,zonata,V,1
+1,O,O5,1,Y,Andrena_haemorrhoa,Andrena,haemorrhoa,M,1
+1,O,O5,1,Y,Andrena_fulva,Andrena,fulva,V,1
+1,O,O5,1,Y,Lasioglossum_malachurum,Lasioglossum,malachurum,V,1
+1,O,O5,1,Y,Andrena_haemorrhoa,Andrena,haemorrhoa,V,2
+1,O,O5,2,Y,Andrena_haemorrhoa,Andrena,haemorrhoa,V,1
+1,O,O5,2,Y,Andrena_helvola,Andrena,helvola,V,1
+1,O,O5,1,Y,Bombus _pascuorum,Bombus ,pascuorum,V,1
+1,O,O6,1,W,Andrena_haemorrhoa,Andrena,haemorrhoa,V,2
+1,O,O6,1,W,Andrena_haemorrhoa,Andrena,haemorrhoa,M,2
+1,O,O6,1,Y,Andrena_haemorrhoa,Andrena,haemorrhoa,V,1
+1,O,O6,1,Y,Andrena_haemorrhoa,Andrena,haemorrhoa,M,1
+1,O,O6,2,B,Andrena_haemorrhoa,Andrena,haemorrhoa,V,1
+1,O,O6,2,B,Andrena_haemorrhoa,Andrena,haemorrhoa,M,1
+1,O,O6,2,Y,Andrena_haemorrhoa,Andrena,haemorrhoa,V,3
+1,O,O6,2,Y,Nomada_goodeniana,Nomada,goodeniana,M,1
+1,O,O6,2,Y,Nomada_zonata,Nomada,zonata,V,1
+1,O,O6,2,Y,Andrena_mitis,Andrena,mitis,V,1
+1,O,P6,1,Y,Bombus _terrestris,Bombus ,terrestris,V,1
+1,P,P1,1,W,Andrena_haemorrhoa,Andrena,haemorrhoa,M,2
+1,P,P1,1,W,Andrena_haemorrhoa,Andrena,haemorrhoa,V,1
+1,P,P1,2,W,Andrena_haemorrhoa,Andrena,haemorrhoa,V,1
+1,P,P1,1,Y,Nomada_flava,Nomada,flava,M,1
+1,P,P1,2,W,Nomada_panzeri,Nomada,panzeri,M,2
+1,P,P1,2,W,Nomada_ruficornis,Nomada,ruficornis,M,1
+1,P,P1,2,W,Nomada_ferruginata,Nomada,ferruginata,V,2
+1,P,P1,2,W,Nomada_flava,Nomada,flava,M,1
+1,P,P2,1,W,Andrena_haemorrhoa,Andrena,haemorrhoa,M,1
+1,P,P3,2,W,Andrena_haemorrhoa,Andrena,haemorrhoa,M,1
+1,P,P3,2,Y,Andrena_haemorrhoa,Andrena,haemorrhoa,M,2
+1,P,P3,2,Y,Nomada_panzeri,Nomada,panzeri,V,1
+1,P,P3,2,Y,Bombus _pascuorum,Bombus ,pascuorum,V,1
+1,P,P5,1,B,Andrena_haemorrhoa,Andrena,haemorrhoa,M,1
+1,P,P5,1,W,Andrena_haemorrhoa,Andrena,haemorrhoa,V,1
+1,P,P5,1,B,Andrena_helvola,Andrena,helvola,M,2
+1,P,P5,1,Y,Andrena_haemorrhoa,Andrena,haemorrhoa,V,2
+1,P,P5,1,Y,Andrena_haemorrhoa,Andrena,haemorrhoa,M,2
+1,P,P5,1,Y,Andrena_helvola,Andrena,helvola,M,1
+1,P,P6,2,Y,Andrena_haemorrhoa,Andrena,haemorrhoa,M,3
+1,P,P7,2,W,Andrena_haemorrhoa,Andrena,haemorrhoa,V,1
+1,P,P7,1,B,Nomada_ferruginata,Nomada,ferruginata,V,1
+1,P,P7,1,W,Bombus _pratorum,Bombus ,pratorum,V,1
+1,P,P8,1,W,Andrena_haemorrhoa,Andrena,haemorrhoa,M,2
+1,P,P8,1,W,Andrena_angustior ,Andrena,angustior ,V,1
+1,P,P8,1,Y,Andrena_haemorrhoa,Andrena,haemorrhoa,M,1
+1,P,P8,1,Y,Andrena_haemorrhoa,Andrena,haemorrhoa,V,1
+2,B,B6,2,B,Bombus _pascuorum,Bombus ,pascuorum,V,1
+2,B,B8,1,Y,Andrena_haemorrhoa,Andrena,haemorrhoa,M,8
+2,B,B8,1,W,Lasioglossum_malachurum,Lasioglossum,malachurum,V,1
+2,B,B8,1,Y,Nomada_flava,Nomada,flava,M,1
+2,B,B8,2,Y,Andrena_haemorrhoa,Andrena,haemorrhoa,V,2
+2,B,B8,1,Y,Andrena_helvola,Andrena,helvola,M,3
+2,B,B8,1,Y,Lasioglossum_malachurum,Lasioglossum,malachurum,V,1
+2,B,B8,2,B,Bombus _pascuorum,Bombus ,pascuorum,V,1
+2,B,B8,2,W,Andrena_cineraria,Andrena,cineraria,V,1
+2,B,B8,2,Y,Andrena_gravida,Andrena,gravida,V,1
+2,B,B8,2,Y,Lasioglossum_malachurum,Lasioglossum,malachurum,V,1
+2,B,B8,2,B,Bombus _hypnorum,Bombus ,hypnorum,M,1
+2,B,B9,2,W,Andrena_haemorrhoa,Andrena,haemorrhoa,V,1
+2,B,B2,1,W,Andrena_haemorrhoa,Andrena,haemorrhoa,V,1
+2,B,B2,1,B,Andrena_fulva,Andrena,fulva,V,1
+2,B,B2,1,B,Andrena_helvola,Andrena,helvola,V,2
+2,B,B2,1,B,Andrena_helvola,Andrena,helvola,M,1
+2,B,B2,1,Y,Andrena_haemorrhoa,Andrena,haemorrhoa,V,2
+2,B,B2,2,Y,Andrena_haemorrhoa,Andrena,haemorrhoa,V,1
+2,B,B2,1,Y,Andrena_helvola,Andrena,helvola,V,2
+2,B,B2,1,Y,Andrena_scotica,Andrena,scotica,V,2
+2,B,B2,1,Y,Nomada_panzeri,Nomada,panzeri,V,1
+2,B,B2,2,W,Lasioglossum_parvulum,Lasioglossum,parvulum,V,1
+2,B,B2,2,W,Lasioglossum_morio,Lasioglossum,morio,V,1
+2,B,B2,2,W,Lasioglossum_spec.,Lasioglossum,spec.,V,1
+2,B,B2,2,Y,Halictus_tumulorum,Halictus,tumulorum,V,1
+2,B,B2,1,B,Bombus _pascuorum,Bombus ,pascuorum,V,1
+2,B,B3,1,W,Bombus _campestris,Bombus ,campestris,V,1
+2,B,B3,2,W,Andrena_cineraria,Andrena,cineraria,V,1
+2,B,B3,1,W,Bombus _pascuorum,Bombus ,pascuorum,V,1
+2,B,B4,2,Y,Andrena_haemorrhoa,Andrena,haemorrhoa,V,1
+2,B,B4,1,W,Andrena_fulva,Andrena,fulva,V,1
+2,B,B4,1,Y,Lasioglossum_parvulum,Lasioglossum,parvulum,V,1
+2,B,B4,1,Y,Andrena_helvola,Andrena,helvola,M,1
+2,B,B4,2,B,Andrena_helvola,Andrena,helvola,M,1
+2,B,B4,2,W,Lasioglossum_morio,Lasioglossum,morio,V,1
+2,B,B4,2,Y,Andrena_haemorrhoa,Andrena,haemorrhoa,M,1
+2,B,B4,2,Y,Andrena_fulva,Andrena,fulva,V,1
+2,B,B4,2,Y,Lasioglossum_spec.,Lasioglossum,spec.,V,1
+2,B,B5,1,Y,Andrena_haemorrhoa,Andrena,haemorrhoa,V,1
+2,B,B5,1,Y,Nomada_flavoguttata,Nomada,flavoguttata,V,1
+2,B,B5,2,W,Andrena_haemorrhoa,Andrena,haemorrhoa,V,1
+2,B,B5,1,Y,Apis_mellifera,Apis,mellifera,V,1
+2,B,B5,2,Y,Andrena_helvola,Andrena,helvola,M,1
+2,B,B6,1,W,Andrena_haemorrhoa,Andrena,haemorrhoa,V,1
+2,B,B6,1,Y,Andrena_haemorrhoa,Andrena,haemorrhoa,V,2
+2,B,B6,1,W,Andrena_helvola,Andrena,helvola,V,1
+2,B,B6,1,Y,Andrena_haemorrhoa,Andrena,haemorrhoa,M,1
+2,B,B6,2,Y,Andrena_haemorrhoa,Andrena,haemorrhoa,M,1
+2,B,B6,1,Y,Andrena_helvola,Andrena,helvola,V,1
+2,B,B6,1,Y,Andrena_helvola,Andrena,helvola,M,2
+2,B,B6,1,Y,Lasioglossum_malachurum,Lasioglossum,malachurum,V,1
+2,B,B6,2,Y,Lasioglossum_malachurum,Lasioglossum,malachurum,V,1
+2,B,B8,1,W,Andrena_haemorrhoa,Andrena,haemorrhoa,M,1
+2,O,O3,1,W,Andrena_haemorrhoa,Andrena,haemorrhoa,V,1
+2,O,O3,1,W,Lasioglossum_malachurum,Lasioglossum,malachurum,V,1
+2,O,O3,2,Y,Andrena_haemorrhoa,Andrena,haemorrhoa,V,1
+2,O,O3,2,Y,Andrena_helvola,Andrena,helvola,V,1
+2,O,O3,2,Y,Lasioglossum_morio,Lasioglossum,morio,V,1
+2,O,O4,1,B,Andrena_haemorrhoa,Andrena,haemorrhoa,V,1
+2,O,O4,1,W,Apis_mellifera,Apis,mellifera,V,1
+2,O,O4,1,W,Lasioglossum_morio,Lasioglossum,morio,V,1
+2,O,O4,1,Y,Andrena_haemorrhoa,Andrena,haemorrhoa,M,3
+2,O,O4,1,Y,Andrena_haemorrhoa,Andrena,haemorrhoa,V,1
+2,O,O4,1,Y,Halictus_scabiosae,Halictus,scabiosae,V,1
+2,O,O4,2,B,Lasioglossum_morio,Lasioglossum,morio,V,1
+2,O,O4,2,Y,Andrena_haemorrhoa,Andrena,haemorrhoa,V,1
+2,O,O4,2,Y,Andrena_haemorrhoa,Andrena,haemorrhoa,M,1
+2,O,O5,1,B,Bombus _lapidarius,Bombus ,lapidarius,V,1
+2,O,O5,1,W,Andrena_helvola,Andrena,helvola,V,1
+2,O,O5,2,B,Lasioglossum_malachurum,Lasioglossum,malachurum,M,1
+2,O,O5,2,W,Andrena_haemorrhoa,Andrena,haemorrhoa,V,1
+2,O,O5,2,Y,Andrena_haemorrhoa,Andrena,haemorrhoa,V,2
+2,O,O6,1,W,Andrena_haemorrhoa,Andrena,haemorrhoa,V,2
+2,O,O6,1,W,Andrena_haemorrhoa,Andrena,haemorrhoa,M,1
+2,O,O6,1,W,Lasioglossum_malachurum,Lasioglossum,malachurum,V,1
+2,O,O6,1,Y,Andrena_haemorrhoa,Andrena,haemorrhoa,V,1
+2,O,O6,2,W,Bombus _terrestris,Bombus ,terrestris,V,1
+2,O,O6,2,Y,Lasioglossum_malachurum,Lasioglossum,malachurum,V,1
+2,O,O7,1,W,Andrena_haemorrhoa,Andrena,haemorrhoa,V,1
+2,O,O7,1,W,Andrena_gravida,Andrena,gravida,V,1
+2,O,O7,1,W,Bombus _lapidarius,Bombus ,lapidarius,V,1
+2,O,O7,1,W,Andrena_bicolor,Andrena,bicolor,V,1
+2,O,O7,1,Y,Andrena_haemorrhoa,Andrena,haemorrhoa,V,1
+2,O,O7,1,Y,Andrena_haemorrhoa,Andrena,haemorrhoa,M,1
+2,O,O7,2,B,Andrena_haemorrhoa,Andrena,haemorrhoa,M,1
+2,O,O7,2,W,Andrena_gravida,Andrena,gravida,V,1
+2,O,O7,2,W,Bombus _pratorum,Bombus ,pratorum,V,1
+2,O,O7,2,W,Bombus _pascuorum,Bombus ,pascuorum,V,1
+2,P,P1,1,W,Andrena_haemorrhoa,Andrena,haemorrhoa,V,1
+2,P,P1,1,W,Lasioglossum_malachurum,Lasioglossum,malachurum,V,1
+2,P,P1,1,W,Nomada_ferruginata,Nomada,ferruginata,V,1
+2,P,P1,2,W,Nomada_flava,Nomada,flava,V,1
+2,P,P1,2,W,Lasioglossum_malachurum,Lasioglossum,malachurum,V,1
+2,P,P1,2,W,Andrena_haemorrhoa,Andrena,haemorrhoa,V,1
+2,P,P2,1,W,Andrena_haemorrhoa,Andrena,haemorrhoa,V,2
+2,P,P2,1,W,Bombus _lapidarius,Bombus ,lapidarius,V,1
+2,P,P2,1,Y,Andrena_haemorrhoa,Andrena,haemorrhoa,V,1
+2,P,P3,1,W,Nomada_flava,Nomada,flava,M,1
+2,P,P3,2,W,Nomada_flava,Nomada,flava,V,1
+2,P,P3,2,W,Nomada_ruficornis,Nomada,ruficornis,M,1
+2,P,P3,2,W,Andrena_haemorrhoa,Andrena,haemorrhoa,M,2
+2,P,P3,2,Y,Nomada_panzeri,Nomada,panzeri,V,1
+2,P,P5,1,B,Andrena_haemorrhoa,Andrena,haemorrhoa,V,1
+2,P,P5,1,B,Andrena_helvola,Andrena,helvola,M,1
+2,P,P5,1,W,Andrena_haemorrhoa,Andrena,haemorrhoa,V,2
+2,P,P5,1,W,Andrena_mitis,Andrena,mitis,V,1
+2,P,P5,1,Y,Andrena_haemorrhoa,Andrena,haemorrhoa,M,2
+2,P,P5,1,Y,Andrena_helvola,Andrena,helvola,M,1
+2,P,P5,2,Y,Andrena_haemorrhoa,Andrena,haemorrhoa,V,2
+2,P,P7,2,B,Lasioglossum_malachurum,Lasioglossum,malachurum,V,1
+2,P,P7,2,W,Bombus _pascuorum,Bombus ,pascuorum,V,1
+2,P,P8,2,Y,Andrena_scotica,Andrena,scotica,V,1
+3,B,B2,1,B,Andrena_haemorrhoa,Andrena,haemorrhoa,V,1
+3,B,B2,1,B,Bombus _pascuorum,Bombus ,pascuorum,V,1
+3,B,B2,1,Y,Micrandrena_spec.,Micrandrena,spec.,V,1
+3,B,B2,1,Y,Nomada_panzeri,Nomada,panzeri,V,1
+3,B,B2,2,Y,Andrena_haemorrhoa,Andrena,haemorrhoa,V,1
+3,B,B2,2,Y,Andrena_helvola,Andrena,helvola,V,1
+3,B,B2,2,Y,Halictus_tumulorum,Halictus,tumulorum,V,1
+3,B,B4,2,Y,Nomada_flava,Nomada,flava,V,1
+3,B,B5,1,W,Andrena_haemorrhoa,Andrena,haemorrhoa,V,1
+3,B,B6,1,W,Bombus _pascuorum,Bombus ,pascuorum,V,1
+3,B,B9,1,B,Bombus _pascuorum,Bombus ,pascuorum,V,1
+3,B,B9,1,Y,Nomada_panzeri,Nomada,panzeri,V,1
+3,O,O4,1,B,Apis_mellifera,Apis,mellifera,V,1
+3,O,O4,1,B,Andrena_helvola,Andrena,helvola,V,1
+3,O,O4,2,B,Apis_mellifera,Apis,mellifera,V,1
+3,O,O6,1,W,Bombus _lapidarius,Bombus ,lapidarius,V,1
+3,O,O6,2,W,Bombus _pascuorum,Bombus ,pascuorum,V,1
+3,O,O7,1,W,Bombus _pascuorum,Bombus ,pascuorum,V,2
+3,O,O7,2,Y,Andrena_haemorrhoa,Andrena,haemorrhoa,V,1
+3,O,O7,2,Y,Andrena_helvola,Andrena,helvola,V,1
+3,P,P1,2,Y,Nomada_panzeri,Nomada,panzeri,V,1
+3,P,P5,1,Y,Andrena_haemorrhoa,Andrena,haemorrhoa,V,1
+3,P,P5,2,W,Anthrophora_plumipes,Anthrophora,plumipes,V,1
+3,P,P8,1,W,Nomada_flava,Nomada,flava,V,1
+3,P,P8,1,W,Andrena_clarkella,Andrena,clarkella,M,1
+3,P,P8,1,Y,Andrena_nitida,Andrena,nitida,V,1
+3,P,P8,2,W,Andrena_helvola,Andrena,helvola,V,1
+3,P,P8,2,Y,Andrena_helvola,Andrena,helvola,V,1
+3,P,P8,2,Y,Nomada_flava,Nomada,flava,V,1
+4,B,B3,2,B,Bombus _pascuorum,Bombus ,pascuorum,V,1
+4,B,B8,1,W,Bombus _pascuorum,Bombus ,pascuorum,V,1
+4,B,B9,2,W,Nomada_flava,Nomada,flava,V,1
+4,O,O7,2,W,Nomada_panzeri,Nomada,panzeri,V,1
+4,P,P2,1,Y,Nomada_panzeri,Nomada,panzeri,V,1
+4,P,P3,1,Y,Bombus _terrestris,Bombus ,terrestris,M,1
+4,P,P6,2,W,Bombus _pratorum,Bombus ,pratorum,V,1
+4,P,P8,1,W,Bombus _pascuorum,Bombus ,pascuorum,V,1
+4,P,P8,2,B,Andrena_helvola,Andrena,helvola,V,1
+5,B,B4,1,B,Bombus _campestris,Bombus ,campestris,M,1
+5,B,B5,2,Y,Bombus _terrestris,Bombus ,terrestris,V,1
+5,B,B5,1,W,Bombus _lucorum,Bombus ,lucorum,M,1
+5,B,B5,2,Y,Andrena_spec.,Andrena,spec.,M,1
+5,B,B8,1,W,Bombus _campestris,Bombus ,campestris,M,1
+5,B,B9,2,B,Bombus _terrestris,Bombus ,terrestris,M,1
+5,O,O4,1,Y,Apis_mellifera,Apis,mellifera,V,1
+5,O,O6,1,B,Apis_mellifera,Apis,mellifera,V,1
+5,O,O6,1,B,Andrena_angustior,Andrena,angustior,V,2
+5,O,O6,2,B,Andrena_angustior,Andrena,angustior,V,1
+5,O,O7,1,W,Apis_mellifera,Apis,mellifera,V,1
+5,O,O7,1,W,Andrena_helvola,Andrena,helvola,M,1
+5,O,O7,2,B,Bombus _pascuorum,Bombus ,pascuorum,V,1
+5,P,P2,1,B,Bombus _campestris,Bombus ,campestris,M,1
+5,P,P3,2,W,Apis_mellifera,Apis,mellifera,V,1
+5,P,P5,1,B,Bombus _pascuorum,Bombus ,pascuorum,V,1
+6,B,B2,1,B,Apis_mellifera,Apis,mellifera,V,1
+6,B,B2,1,B,Bombus _onbekend,Bombus ,onbekend,?,1
+6,B,B2,1,W,Apis_mellifera,Apis,mellifera,V,3
+6,B,B2,1,Y,Apis_mellifera,Apis,mellifera,V,1
+6,B,B5,1,W,Bombus _lucorum,Bombus ,lucorum,M,1
+6,B,B6,1,B,Bombus _campestris,Bombus ,campestris,M,1
+6,B,B8,1,B,Bombus _campestris,Bombus ,campestris,M,1
+6,B,B8,1,W,Bombus _pascuorum,Bombus ,pascuorum,M,1
+6,P,P2,1,B,Apis_mellifera,Apis,mellifera,V,1
+6,P,P2,1,Y,Bombus _pascuorum,Bombus ,pascuorum,V,1
+8,O,O6,1,W,Apis_mellifera,Apis,mellifera,V,1
+8,O,O7,1,W,Bombus _pascuorum,Bombus ,pascuorum,V,1
+7,P,P3,1,W,Apis_mellifera,Apis,mellifera,V,1
