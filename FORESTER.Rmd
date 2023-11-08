@@ -1,30 +1,336 @@
 ---
 title: "FORESTER"
+knit: (function(input_file, encoding) {
+    out_dir <- 'docs';
+    rmarkdown::render(input_file,
+      encoding=encoding,
+      output_file=file.path(dirname(input_file), out_dir, 'index.html'))})
 author: "Wim De Schuyter"
 date: "2023-11-08"
 output: html_document
 ---
 
-```{r setup, include=FALSE}
+```{r setup, include=FALSE, echo = FALSE, warning=FALSE}
 knitr::opts_chunk$set(echo = TRUE)
+library(tidyr)
+library(dplyr)
+library(ggplot2)
+library(readr)
+library(codebookr)
+library(Hmisc)
 ```
 
-## R Markdown
+```{r loading data, echo=FALSE}
+syrphids_raw <- read.csv("syrphids_raw.csv")
 
-This is an R Markdown document. Markdown is a simple formatting syntax for authoring HTML, PDF, and MS Word documents. For more details on using R Markdown see <http://rmarkdown.rstudio.com>.
-
-When you click the **Knit** button a document will be generated that includes both content as well as the output of any embedded R code chunks within the document. You can embed an R code chunk like this:
-
-```{r cars}
-summary(cars)
+bees_raw <- read.csv("bees_raw.csv")
 ```
 
-## Including Plots
 
-You can also embed plots, for example:
+```{r tidy data, echo=FALSE, warning=FALSE}
+# sum males and females
+# + at the moment also 'summing' species abundances of all colours of containers within a 'trap'. For other analyses, we might want to split up the different colours again
 
-```{r pressure, echo=FALSE}
-plot(pressure)
+syrphids <- subset(syrphids_raw, select = -c(Sex, Colour, Genus, Speciesname)) %>%
+  group_by(Session, Location, Treetype, Trap, Species) %>%
+  summarise(across(everything(), sum)) %>%
+  ungroup()
+
+bees <- subset(bees_raw, select = -c(Sex, Colour, Genus, Speciesname)) %>%
+  group_by(Session, Location, Treetype, Trap, Species) %>%
+  summarise(across(everything(), sum)) %>%
+  ungroup() 
+
+# ungroup() is important because for example complete() doesn't work appropriately on grouped dataframes, grouping variables
+
+###syrphids
+# make wide, species-abundance matrix
+s_wide <- syrphids %>%
+      pivot_wider(names_from = "Species",
+              values_from = "Count")
+
+# complete matrix with samples without individuals
+s_wide_complete <- s_wide %>%
+  complete(Session, Location, Treetype, Trap) %>%
+  mutate(across(everything(), replace_na, 0)) %>% 
+  subset((Treetype == "B" & Location %in% c("B2", "B3", "B4", "B5", "B6", "B8", "B9")|
+            Treetype == "O" & Location %in% c("O3", "O4", "O5", "O6", "O7")|
+            Treetype == "P" & Location %in% c("P1", "P2", "P3", "P5", "P6", "P7", "P8")))
+
+# make complete, tidy dataframe from s_wide_complete
+s_tidy_complete <- s_wide_complete %>%
+  pivot_longer(cols = !c(Location, Treetype, Session, Trap),
+               names_to = "Species",
+               values_to = "Count")
+
+# Calculate total abundance from this complete tidy df
+s_abundance <- aggregate(data = s_tidy_complete,
+                  Count ~ Session + Location + Treetype,
+                  FUN = sum)
+
+s_abundance$Treetype <- factor(s_abundance$Treetype, 
+                            levels = c("B", "O", "P"))
+
+s_abundance$Session <- as.factor(s_abundance$Session)
+
+###bees
+b_wide <- bees %>%
+      pivot_wider(names_from = "Species",
+              values_from = "Count")
+
+# complete matrix with samples without individuals
+b_wide_complete <- b_wide %>%
+  complete(Session, Location, Treetype, Trap) %>%
+  mutate(across(everything(), replace_na, 0)) %>% 
+  subset((Treetype == "B" & Location %in% c("B2", "B3", "B4", "B5", "B6", "B8", "B9")|
+            Treetype == "O" & Location %in% c("O3", "O4", "O5", "O6", "O7")|
+            Treetype == "P" & Location %in% c("P1", "P2", "P3", "P5", "P6", "P7", "P8")))
+
+# make complete, tidy dataframe from s_wide_complete
+b_tidy_complete <- b_wide_complete %>%
+  pivot_longer(cols = !c(Location, Treetype, Session, Trap),
+               names_to = "Species",
+               values_to = "Count")
+
+# Calculate total abundance from this complete tidy df
+b_abundance <- aggregate(data = b_tidy_complete,
+                  Count ~ Session + Location + Treetype,
+                  FUN = sum)
+
+b_abundance$Treetype <- factor(b_abundance$Treetype, 
+                            levels = c("B", "O", "P"))
+
+b_abundance$Session <- as.factor(b_abundance$Session)
 ```
 
-Note that the `echo = FALSE` parameter was added to the code chunk to prevent printing of the R code that generated the plot.
+
+```{r Barplots, echo=FALSE, warning=FALSE}
+cbPalette <- c("#999999", "#E69F00", "#56B4E9", "#009E73", "#F0E442", "#0072B2", "#D55E00", "#CC79A7")
+
+ggplot(data = s_abundance, aes(x = Session, 
+                             y = Count, 
+                             fill = Treetype, 
+                             colour = Treetype)) +
+  geom_bar(position="dodge", stat="summary", fun="mean") +
+  scale_fill_manual(values = alpha(c("#D55E00", "#F0E442", 
+                                     "#009E73"), 0.8)) +
+  scale_color_manual(values = c("#D55E00", "#F0E442", "#009E73")) +
+  theme(panel.grid.major.x = element_blank(),
+        panel.grid.minor.x = element_blank(),
+        panel.grid.major.y = element_line(linewidth = .5, color="darkgrey"),
+        panel.grid.minor.y = element_line(linewidth = .5, color="darkgrey"),
+        panel.background = element_blank(),
+        axis.title.x = element_blank(),
+        axis.text.x = element_text(size = 13),
+        axis.text.y = element_text(size = 10),
+        axis.title.y = element_text(size = 14, margin = margin(t = 0, r = 20, 
+                                                               b = 0, l = 0))) +
+  labs(y = "Mean syrphid-abundance (14 day period)") +
+  scale_x_discrete(labels=c('end \nApril', 'begin \nMay', 'end \nMay', 'early \nJune', 'early \nJuly', 'early \nAugust',
+                            'end \nAugust', 'early \nOctober'))+
+  ggtitle("NMDS syrphids")
+
+ggplot(data = b_abundance, aes(x = Session, 
+                             y = Count, 
+                             fill = Treetype, 
+                             colour = Treetype)) +
+  geom_bar(position="dodge", stat="summary", fun="mean") +
+  scale_fill_manual(values = alpha(c("#D55E00", "#F0E442", 
+                                     "#009E73"), 0.8)) +
+  scale_color_manual(values = c("#D55E00", "#F0E442", "#009E73")) +
+  theme(panel.grid.major.x = element_blank(),
+        panel.grid.minor.x = element_blank(),
+        panel.grid.major.y = element_line(linewidth = .5, color="darkgrey"),
+        panel.grid.minor.y = element_line(linewidth = .5, color="darkgrey"),
+        panel.background = element_blank(),
+        axis.title.x = element_blank(),
+        axis.text.x = element_text(size = 13),
+        axis.text.y = element_text(size = 10),
+        axis.title.y = element_text(size = 14, margin = margin(t = 0, r = 20, 
+                                                               b = 0, l = 0))) +
+  labs(y = "Mean bee-abundance (14 day period)") +
+  scale_x_discrete(labels=c('end \nApril', 'begin \nMay', 'end \nMay', 'early \nJune', 'early \nJuly', 'early \nAugust',
+                            'end \nAugust', 'early \nOctober'))+
+  ggtitle("Barplot bees")
+
+```
+
+```{r NMDS, echo=FALSE, warning=FALSE}
+library(ape)
+library(vegan)
+
+###Bees
+
+# Make species-abundance matrix summing two traps together
+# Remove columns (species) for which all rows are 0 (none of the samples contain this species (because it was for example only found in session 2 in one study site)) though 'select(where(~...))'
+# Do not include _species or _sp.
+species_bees_nmds <- b_wide_complete %>%
+   subset(select = -c(Session, Trap, Micrandrena_spec., Lasioglossum_spec., Andrena_spec., `Bombus _onbekend`)) %>%
+   group_by(Location, Treetype) %>%
+   summarise(across(everything(), sum)) %>%
+   ungroup() %>%
+   select(where(~ any(. != 0))) %>%
+   as.data.frame()
+
+rownames(species_bees_nmds) <- paste(species_bees_nmds$Location, species_bees_nmds$Treetype)
+
+# Remove columns Location and Landuse 
+species_bees_nmds_clean <- species_bees_nmds[, -c(0:2)] 
+species_bees_nmds_clean <- as.matrix(species_bees_nmds_clean)
+
+library(tibble) 
+# for the function rownames_to_column
+# species_bee_nmds_clean_noempty <- as.data.frame(species_bee_nmds_clean) %>%
+#   rownames_to_column("sample") %>% 
+#   filter(if_all(everything(.), ~. !=0)) %>%
+#   column_to_rownames("sample") %>%
+#   as.matrix
+# in dplyr, you should not have row names, you want them to be in seperate columns,
+# but for the metaMDS, you want the name of your sample (Location-Landuse) as a rowname
+
+
+# For the NMDS plot, you will want to have an easy way to add a column containing the tree type
+# This is why you do the following:
+species_bees_nmds_noempty <- species_bees_nmds[rowSums(species_bees_nmds_clean)!=0,] 
+
+# Now to have the community matrix without empty rows for the metaMDS:
+species_bees_nmds_clean_noempty <- species_bees_nmds_clean[rowSums(species_bees_nmds_clean)!=0,]
+# spec_April_clean had 45 rows (45 study sites), when empty rows, without any syrphids, are removed, we end up with 31 rows/study sites
+bees_nmds_results <- metaMDS(comm = species_bees_nmds_clean_noempty,
+                        autotransform = FALSE,
+                        distance = "bray",
+                        k = 2,
+                        maxit = 300,
+                        try = 100,
+                        trymax = 100)
+
+###Syrphids
+
+species_syrphids_nmds <- s_wide_complete %>%
+   subset(select = -c(Session, Trap, Syrphidae_spec., Eupeodes_spec., Melanostoma_spec.)) %>%
+   group_by(Location, Treetype) %>%
+   summarise(across(everything(), sum)) %>%
+   ungroup() %>%
+   select(where(~ any(. != 0))) %>%
+   as.data.frame()
+
+rownames(species_syrphids_nmds) <- paste(species_syrphids_nmds$Location, species_syrphids_nmds$Treetype)
+
+species_syrphids_nmds_clean <- species_syrphids_nmds[, -c(0:2)] 
+species_syrphids_nmds_clean <- as.matrix(species_syrphids_nmds_clean)
+
+species_syrphids_nmds_noempty <- species_syrphids_nmds[rowSums(species_syrphids_nmds_clean)!=0,] 
+
+species_syrphids_nmds_clean_noempty <- species_syrphids_nmds_clean[rowSums(species_syrphids_nmds_clean)!=0,]
+
+syrphids_nmds_results <- metaMDS(comm = species_syrphids_nmds_clean_noempty,
+                        autotransform = FALSE,
+                        distance = "bray",
+                        k = 2,
+                        maxit = 300,
+                        try = 100,
+                        trymax = 100)
+```
+
+```{r plotNMDS, echo=FALSE, warning=FALSE}
+
+# First create a data frame of the scores from the individual sites.
+# This data frame will contain x and y values for where sites are located.
+bees_data_scores <- as.data.frame(scores(bees_nmds_results)$sites)
+
+# Now add an extra column indicating which land use the community is coming from
+bees_data_scores <- cbind(bees_data_scores, species_bees_nmds_noempty[,2])
+colnames(bees_data_scores)[3] <- "Treetype"
+bees_data_scores$Treetype <- factor(bees_data_scores$Treetype,
+                              levels = c("B", "O", "P"))
+# Next, we can add the scores for species data
+bees_species_scores <- as.data.frame(scores(bees_nmds_results, "species"))
+
+# Add a column equivalent to the row name to create species labels
+bees_species_scores$Species <- rownames(bees_species_scores)
+
+# Now for the polygons/hulls:
+bees_Beech <- bees_data_scores[bees_data_scores$Treetype == "B", ][chull(bees_data_scores[bees_data_scores$Treetype == 
+    "B", c("NMDS1", "NMDS2")]), ]  # hull values for forests
+
+bees_Oak <- bees_data_scores[bees_data_scores$Treetype == "O", ][chull(bees_data_scores[bees_data_scores$Treetype == 
+    "O", c("NMDS1", "NMDS2")]), ]  # hull values for forests
+
+bees_Poplar <- bees_data_scores[bees_data_scores$Treetype == "P", ][chull(bees_data_scores[bees_data_scores$Treetype == 
+    "P", c("NMDS1", "NMDS2")]), ]  # hull values for forests
+
+bees_hull_data <- rbind(bees_Beech, bees_Oak, bees_Poplar)  
+
+# Now we can build the plot!
+
+ggplot() +
+  geom_polygon(data=bees_hull_data,aes(x = NMDS1, y = NMDS2, 
+                                  color = Treetype, 
+                                  fill = Treetype,
+                                  group = Treetype),alpha=0.30) +
+  scale_fill_manual(values = c("#D55E00", "#F0E442", "#009E73"),
+                     name = "Treetype") +
+  geom_text(data = bees_species_scores, aes(x = NMDS1, y = NMDS2, label = Species),
+            alpha = 0.5, size = 2.5) +
+  geom_point(data = bees_data_scores, aes(x = NMDS1, y = NMDS2, 
+                                     color = Treetype), size = 2.5) +
+  scale_color_manual(values = c("#D55E00", "#F0E442", "#009E73"),
+                     name = "Treetype") +
+  annotate(geom = "label", x = -1, y = 2, size = 4,
+           label = paste("Stress: ", round(bees_nmds_results$stress, digits = 3))) +
+  theme_minimal() +
+  theme(legend.position = "right",
+        text = element_text(size = 12))+
+  ggtitle("NMDS bees")
+
+###Syrphids
+
+syrphids_data_scores <- as.data.frame(scores(syrphids_nmds_results)$sites)
+
+# Now add an extra column indicating which land use the community is coming from
+syrphids_data_scores <- cbind(syrphids_data_scores, species_syrphids_nmds_noempty[,2])
+colnames(syrphids_data_scores)[3] <- "Treetype"
+syrphids_data_scores$Treetype <- factor(syrphids_data_scores$Treetype,
+                              levels = c("B", "O", "P"))
+# Next, we can add the scores for species data
+syrphids_species_scores <- as.data.frame(scores(syrphids_nmds_results, "species"))
+
+# Add a column equivalent to the row name to create species labels
+syrphids_species_scores$Species <- rownames(syrphids_species_scores)
+
+# Now for the polygons/hulls:
+syrphids_Beech <- syrphids_data_scores[syrphids_data_scores$Treetype == "B", ][chull(syrphids_data_scores[syrphids_data_scores$Treetype == 
+    "B", c("NMDS1", "NMDS2")]), ]  # hull values for forests
+
+syrphids_Oak <- syrphids_data_scores[syrphids_data_scores$Treetype == "O", ][chull(syrphids_data_scores[syrphids_data_scores$Treetype == 
+    "O", c("NMDS1", "NMDS2")]), ]  # hull values for forests
+
+syrphids_Poplar <- syrphids_data_scores[syrphids_data_scores$Treetype == "P", ][chull(syrphids_data_scores[syrphids_data_scores$Treetype == 
+    "P", c("NMDS1", "NMDS2")]), ]  # hull values for forests
+
+syrphids_hull_data <- rbind(syrphids_Beech, syrphids_Oak, syrphids_Poplar)  
+
+# Now we can build the plot!
+
+ggplot() +
+  geom_polygon(data=syrphids_hull_data,aes(x = NMDS1, y = NMDS2, 
+                                  color = Treetype, 
+                                  fill = Treetype,
+                                  group = Treetype),alpha=0.30) +
+  scale_fill_manual(values = c("#D55E00", "#F0E442", "#009E73"),
+                     name = "Treetype") +
+  geom_text(data = syrphids_species_scores, aes(x = NMDS1, y = NMDS2, label = Species),
+            alpha = 0.5, size = 2.5) +
+  geom_point(data = syrphids_data_scores, aes(x = NMDS1, y = NMDS2, 
+                                     color = Treetype), size = 2.5) +
+  scale_color_manual(values = c("#D55E00", "#F0E442", "#009E73"),
+                     name = "Treetype") +
+  annotate(geom = "label", x = -1, y = 2, size = 4,
+           label = paste("Stress: ", round(syrphids_nmds_results$stress, digits = 3))) +
+  theme_minimal() +
+  theme(legend.position = "right",
+        text = element_text(size = 12))+
+  ggtitle("NMDS syrphids")
+
+```
+
