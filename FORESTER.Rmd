@@ -326,7 +326,7 @@ ggplot() +
                      name = "Treetype") +
   scale_shape_manual(values = c(15, 16, 17)) +
   annotate(geom = "label", x = -1, y = 2, size = 4,
-           label = paste("Stress: ", round(syrphids_nmds_results$stress, digits = 3))) +
+           label = paste("Stress: ", round(bees_nmds_results$stress, digits = 3))) +
   geom_text(data = bees_species_scores, aes(x = NMDS1, y = NMDS2, label = Species),
             alpha = 0.5, size = 1.5) +
   theme_minimal() +
