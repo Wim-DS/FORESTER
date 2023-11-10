@@ -172,6 +172,10 @@ species_bees_nmds <- b_wide_complete %>%
    select(where(~ any(. != 0))) %>%
    as.data.frame()
 
+species_bees_nmds <- species_bees_nmds[rowSums(species_bees_nmds[, -c(0:2)])!= 0, ]
+bees_LU <- species_bees_nmds[, 2]
+
+
 rownames(species_bees_nmds) <- paste(species_bees_nmds$Location, species_bees_nmds$Treetype)
 
 # Remove columns Location and Landuse 
@@ -213,6 +217,9 @@ species_syrphids_nmds <- s_wide_complete %>%
    ungroup() %>%
    select(where(~ any(. != 0))) %>%
    as.data.frame()
+
+species_syrphids_nmds <- species_syrphids_nmds[rowSums(species_syrphids_nmds[, -c(0:2)])!= 0, ]
+syrphids_LU <- species_syrphids_nmds[, 2]
 
 rownames(species_syrphids_nmds) <- paste(species_syrphids_nmds$Location, species_syrphids_nmds$Treetype)
 
@@ -281,7 +288,54 @@ ggplot() +
   theme_minimal() +
   theme(legend.position = "right",
         text = element_text(size = 12))+
-  ggtitle("NMDS bees")
+  ggtitle("NMDS bees polygon")
+
+bees_MDS_xy <- data.frame(bees_nmds_results$points)
+bees_MDS_xy$Treetype <- factor(bees_LU, 
+                         levels = c("B", "O", "P"))
+# indicator species
+library(indicspecies)
+bees_data <- species_bees_nmds %>%
+ subset(select = -c(Location, Treetype))
+ Treetype <- species_bees_nmds$Treetype
+ bees_inv = multipatt(bees_data, 
+                 Treetype, 
+                 func = "r.g", control = how(nperm=999))
+ summary(bees_inv, alpha = 0.05)
+# alpha geeft significantieniveau vanaf wanneer hij soorten als specifiek voor boomtype beschouwt
+#ind_species_scores <- species_scores %>%
+#   rownames_to_column("Species") %>%
+#   subset(subset = Species %in% c("Andrena_clarkella",
+#                                  "Osmia_bicornis", "Andrena_haemorrhoa",
+#                                  "Andrena_vaga", "Andrena_fulva",
+#                                  "Anthophora_plumipes"))
+# rownames(ind_species_scores) <- ind_species_scores$Species
+# ind_species_scores <- ind_species_scores %>%
+#   select(-Species)
+
+ggplot() +
+  stat_ellipse(data = bees_MDS_xy, geom = "polygon", aes(MDS1, MDS2, 
+                                                    color = Treetype, 
+                                                    fill = Treetype), alpha = 0.3) +
+  geom_point(data = bees_data_scores, aes(x = NMDS1, y = NMDS2, 
+                                     shape = Treetype, color = Treetype),
+             size = 2) +
+  scale_fill_manual(values = c("#D55E00", "#F0E442", "#009E73"),
+                    name = "Treetype") +
+  scale_color_manual(values = c("#D55E00", "#F0E442", "#009E73"),
+                     name = "Treetype") +
+  scale_shape_manual(values = c(15, 16, 17)) +
+  annotate(geom = "label", x = -1, y = 2, size = 4,
+           label = paste("Stress: ", round(syrphids_nmds_results$stress, digits = 3))) +
+  geom_text(data = bees_species_scores, aes(x = NMDS1, y = NMDS2, label = Species),
+            alpha = 0.5, size = 1.5) +
+  theme_minimal() +
+  theme(text = element_text(size = 12),
+        panel.border = element_blank(), 
+        panel.grid.major = element_blank(),
+        panel.grid.minor = element_blank(), 
+        axis.line = element_line(colour = "darkgrey"))+
+  ggtitle("NMDS bees ellips") 
 
 ###Syrphids
 
@@ -330,7 +384,41 @@ ggplot() +
   theme_minimal() +
   theme(legend.position = "right",
         text = element_text(size = 12))+
-  ggtitle("NMDS syrphids")
+  ggtitle("NMDS syrphids polygon")
 
+syrphids_MDS_xy <- data.frame(syrphids_nmds_results$points)
+syrphids_MDS_xy$Treetype <- factor(syrphids_LU, 
+                         levels = c("B", "O", "P"))
+# indicator species
+syrphids_data <- species_syrphids_nmds %>%
+ subset(select = -c(Location, Treetype))
+ Treetype <- species_syrphids_nmds$Treetype
+ syrphids_inv = multipatt(syrphids_data, 
+                 Treetype, 
+                 func = "r.g", control = how(nperm=999))
+ summary(syrphids_inv, alpha = 0.05)
+
+ ggplot() +
+  stat_ellipse(data = syrphids_MDS_xy, geom = "polygon", aes(MDS1, MDS2, 
+                                                    color = Treetype, 
+                                                    fill = Treetype), alpha = 0.3) +
+  geom_point(data = syrphids_data_scores, aes(x = NMDS1, y = NMDS2, 
+                                     shape = Treetype, color = Treetype),
+             size = 2) +
+  scale_fill_manual(values = c("#D55E00", "#F0E442", "#009E73"),
+                    name = "Treetype") +
+  scale_color_manual(values = c("#D55E00", "#F0E442", "#009E73"),
+                     name = "Treetype") +
+  scale_shape_manual(values = c(15, 16, 17)) +
+  annotate(geom = "label", x = -1, y = 2, size = 4,
+           label = paste("Stress: ", round(syrphids_nmds_results$stress, digits = 3))) +
+  geom_text(data = syrphids_species_scores, aes(x = NMDS1, y = NMDS2, label = Species),
+            alpha = 0.5, size = 1.5) +
+  theme_minimal() +
+  theme(text = element_text(size = 12),
+        panel.border = element_blank(), 
+        panel.grid.major = element_blank(),
+        panel.grid.minor = element_blank(), 
+        axis.line = element_line(colour = "darkgrey"))+
+  ggtitle("NMDS syrphids ellips") 
 ```
-
