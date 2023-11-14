@@ -18,6 +18,11 @@ library(ggplot2)
 library(readr)
 library(codebookr)
 library(Hmisc)
+library(xlsx)
+library(ggpubr)
+library(corrplot)
+library(car)
+library(MASS)
 ```
 
 ```{r loading data, echo=FALSE}
@@ -27,7 +32,7 @@ bees_raw <- read.csv("bees_raw.csv")
 ```
 
 
-```{r tidy data, echo=FALSE, warning=FALSE}
+```{r tidy data, echo=FALSE, warning=FALSE, message=FALSE}
 # sum males and females
 # + at the moment also 'summing' species abundances of all colours of containers within a 'trap'. For other analyses, we might want to split up the different colours again
 
@@ -67,11 +72,36 @@ s_tidy_complete <- s_wide_complete %>%
 s_abundance <- aggregate(data = s_tidy_complete,
                   Count ~ Session + Location + Treetype,
                   FUN = sum)
+s_abundance <- as.data.frame(s_abundance) %>% 
+  complete(Session, Location, Treetype) %>%
+  mutate(across(everything(), replace_na, 0)) %>% 
+  subset((Treetype == "B" & Location %in% c("B2", "B3", "B4", "B5", "B6", "B8", "B9")|
+            Treetype == "O" & Location %in% c("O3", "O4", "O5", "O6", "O7")|
+            Treetype == "P" & Location %in% c("P1", "P2", "P3", "P5", "P6", "P7", "P8")))
 
 s_abundance$Treetype <- factor(s_abundance$Treetype, 
                             levels = c("B", "O", "P"))
 
 s_abundance$Session <- as.factor(s_abundance$Session)
+
+# Calculate total species richness from this complete tidy df
+s_richness <- s_tidy_complete %>% 
+  filter(Count != 0) %>% 
+  group_by(Location, Session, Treetype) %>% 
+  summarise(SR = n())
+
+s_richness <- as.data.frame(s_richness) %>% 
+  complete(Session, Location, Treetype) %>%
+  mutate(across(everything(), replace_na, 0)) %>% 
+  subset((Treetype == "B" & Location %in% c("B2", "B3", "B4", "B5", "B6", "B8", "B9")|
+            Treetype == "O" & Location %in% c("O3", "O4", "O5", "O6", "O7")|
+            Treetype == "P" & Location %in% c("P1", "P2", "P3", "P5", "P6", "P7", "P8")))
+
+s_richness$Treetype <- factor(s_richness$Treetype, 
+                            levels = c("B", "O", "P"))
+
+s_richness$Session <- as.factor(s_richness$Session)
+
 
 ###bees
 b_wide <- bees %>%
@@ -96,15 +126,40 @@ b_tidy_complete <- b_wide_complete %>%
 b_abundance <- aggregate(data = b_tidy_complete,
                   Count ~ Session + Location + Treetype,
                   FUN = sum)
+b_abundance <- as.data.frame(b_abundance) %>% 
+  complete(Session, Location, Treetype) %>%
+  mutate(across(everything(), replace_na, 0)) %>% 
+  subset((Treetype == "B" & Location %in% c("B2", "B3", "B4", "B5", "B6", "B8", "B9")|
+            Treetype == "O" & Location %in% c("O3", "O4", "O5", "O6", "O7")|
+            Treetype == "P" & Location %in% c("P1", "P2", "P3", "P5", "P6", "P7", "P8")))
 
 b_abundance$Treetype <- factor(b_abundance$Treetype, 
                             levels = c("B", "O", "P"))
 
 b_abundance$Session <- as.factor(b_abundance$Session)
+
+# Calculate total species richness from this complete tidy df
+b_richness <- b_tidy_complete %>% 
+  filter(Count != 0) %>% 
+  group_by(Location, Session, Treetype) %>% 
+  summarise(SR = n())
+
+b_richness <- as.data.frame(b_richness) %>% 
+  complete(Session, Location, Treetype) %>%
+  mutate(across(everything(), replace_na, 0)) %>% 
+  subset((Treetype == "B" & Location %in% c("B2", "B3", "B4", "B5", "B6", "B8", "B9")|
+            Treetype == "O" & Location %in% c("O3", "O4", "O5", "O6", "O7")|
+            Treetype == "P" & Location %in% c("P1", "P2", "P3", "P5", "P6", "P7", "P8")))
+
+b_richness$Treetype <- factor(b_richness$Treetype, 
+                            levels = c("B", "O", "P"))
+
+b_richness$Session <- as.factor(b_richness$Session)
+
 ```
 
-
-```{r Barplots, echo=FALSE, warning=FALSE}
+## Abundance per collection session
+```{r Barplots, echo=FALSE, warning=FALSE, message=FALSE}
 cbPalette <- c("#999999", "#E69F00", "#56B4E9", "#009E73", "#F0E442", "#0072B2", "#D55E00", "#CC79A7")
 
 ggplot(data = s_abundance, aes(x = Session, 
@@ -128,7 +183,7 @@ ggplot(data = s_abundance, aes(x = Session,
   labs(y = "Mean syrphid-abundance (14 day period)") +
   scale_x_discrete(labels=c('end \nApril', 'begin \nMay', 'end \nMay', 'early \nJune', 'early \nJuly', 'early \nAugust',
                             'end \nAugust', 'early \nOctober'))+
-  ggtitle("NMDS syrphids")
+  ggtitle("Barplot syrphids")
 
 ggplot(data = b_abundance, aes(x = Session, 
                              y = Count, 
@@ -155,7 +210,734 @@ ggplot(data = b_abundance, aes(x = Session,
 
 ```
 
-```{r NMDS, echo=FALSE, warning=FALSE}
+
+```{r Boxplots, echo=FALSE, warning=FALSE, message=FALSE, results='hide'}
+cbPalette <- c("#999999", "#E69F00", "#56B4E9", "#009E73", "#F0E442", "#0072B2", "#D55E00", "#CC79A7")
+
+ggplot(data = s_abundance, aes(x = Session, 
+                             y = Count, 
+                             fill = Treetype, 
+                             colour = Treetype)) +
+  geom_boxplot() +
+  scale_fill_manual(values = alpha(c("#D55E00", "#F0E442", 
+                                     "#009E73"), 0.8)) +
+  scale_color_manual(values = c("#D55E00", "#F0E442", "#009E73")) +
+  theme(panel.grid.major.x = element_blank(),
+        panel.grid.minor.x = element_blank(),
+        panel.grid.major.y = element_line(linewidth = .5, color="darkgrey"),
+        panel.grid.minor.y = element_line(linewidth = .5, color="darkgrey"),
+        panel.background = element_blank(),
+        axis.title.x = element_blank(),
+        axis.text.x = element_text(size = 13),
+        axis.text.y = element_text(size = 10),
+        axis.title.y = element_text(size = 14, margin = margin(t = 0, r = 20, 
+                                                               b = 0, l = 0))) +
+  labs(y = "Abundance Syrphids") +
+  scale_x_discrete(labels=c('end \nApril', 'begin \nMay', 'end \nMay', 'early \nJune', 'early \nJuly', 'early \nAugust',
+                            'end \nAugust', 'early \nOctober'))+
+  ggtitle("Boxplot syrphids abundance")
+
+ggplot(data = b_abundance, aes(x = Session, 
+                             y = Count, 
+                             fill = Treetype, 
+                             colour = Treetype)) +
+  geom_boxplot() +
+  scale_fill_manual(values = alpha(c("#D55E00", "#F0E442", 
+                                     "#009E73"), 0.8)) +
+  scale_color_manual(values = c("#D55E00", "#F0E442", "#009E73")) +
+  theme(panel.grid.major.x = element_blank(),
+        panel.grid.minor.x = element_blank(),
+        panel.grid.major.y = element_line(linewidth = .5, color="darkgrey"),
+        panel.grid.minor.y = element_line(linewidth = .5, color="darkgrey"),
+        panel.background = element_blank(),
+        axis.title.x = element_blank(),
+        axis.text.x = element_text(size = 13),
+        axis.text.y = element_text(size = 10),
+        axis.title.y = element_text(size = 14, margin = margin(t = 0, r = 20, 
+                                                               b = 0, l = 0))) +
+  labs(y = "Abundance Bees") +
+  scale_x_discrete(labels=c('end \nApril', 'begin \nMay', 'end \nMay', 'early \nJune', 'early \nJuly', 'early \nAugust',
+                            'end \nAugust', 'early \nOctober'))+
+  ggtitle("Boxplot bees abundance")
+
+#----------------------------
+
+ggplot(data = s_richness, aes(x = Session, 
+                             y = SR, 
+                             fill = Treetype, 
+                             colour = Treetype)) +
+  geom_boxplot() +
+  scale_fill_manual(values = alpha(c("#D55E00", "#F0E442", 
+                                     "#009E73"), 0.8)) +
+  scale_color_manual(values = c("#D55E00", "#F0E442", "#009E73")) +
+  theme(panel.grid.major.x = element_blank(),
+        panel.grid.minor.x = element_blank(),
+        panel.grid.major.y = element_line(linewidth = .5, color="darkgrey"),
+        panel.grid.minor.y = element_line(linewidth = .5, color="darkgrey"),
+        panel.background = element_blank(),
+        axis.title.x = element_blank(),
+        axis.text.x = element_text(size = 13),
+        axis.text.y = element_text(size = 10),
+        axis.title.y = element_text(size = 14, margin = margin(t = 0, r = 20, 
+                                                               b = 0, l = 0))) +
+  labs(y = "Richness Syrphids") +
+  scale_x_discrete(labels=c('end \nApril', 'begin \nMay', 'end \nMay', 'early \nJune', 'early \nJuly', 'early \nAugust',
+                            'end \nAugust', 'early \nOctober'))+
+  ggtitle("Boxplot syrphids richness")
+
+ggplot(data = b_richness, aes(x = Session, 
+                             y = SR, 
+                             fill = Treetype, 
+                             colour = Treetype)) +
+  geom_boxplot() +
+  scale_fill_manual(values = alpha(c("#D55E00", "#F0E442", 
+                                     "#009E73"), 0.8)) +
+  scale_color_manual(values = c("#D55E00", "#F0E442", "#009E73")) +
+  theme(panel.grid.major.x = element_blank(),
+        panel.grid.minor.x = element_blank(),
+        panel.grid.major.y = element_line(linewidth = .5, color="darkgrey"),
+        panel.grid.minor.y = element_line(linewidth = .5, color="darkgrey"),
+        panel.background = element_blank(),
+        axis.title.x = element_blank(),
+        axis.text.x = element_text(size = 13),
+        axis.text.y = element_text(size = 10),
+        axis.title.y = element_text(size = 14, margin = margin(t = 0, r = 20, 
+                                                               b = 0, l = 0))) +
+  labs(y = "Richness Bees") +
+  scale_x_discrete(labels=c('end \nApril', 'begin \nMay', 'end \nMay', 'early \nJune', 'early \nJuly', 'early \nAugust',
+                            'end \nAugust', 'early \nOctober'))+
+  ggtitle("Boxplot bees richness")
+```
+
+
+```{r Models, echo=FALSE, warning=FALSE, message=FALSE, results='hide'}
+bees_variables <- b_abundance %>% 
+  left_join(., b_richness, by = c("Location", "Session", "Treetype")) %>% 
+  rename(b_AB = "Count", b_SR = "SR")
+
+syrphids_variables <- s_abundance %>% 
+  left_join(., s_richness, by = c("Location", "Session", "Treetype"))%>% 
+  rename(s_AB = "Count", s_SR = "SR")
+
+flowerdata <- read.csv("flowerdata.csv") %>% 
+  group_by(Location, Session, Treetype) %>% 
+  summarise(flower_AB = sum(flower_AB), flower_SR = sum(flower_SR)) %>% 
+  mutate(Treetype = as.factor(Treetype)) %>% 
+  mutate(Session = as.factor(Session))
+
+SCI_table <- read.csv("SCI.csv") %>% 
+  mutate(Treetype = as.factor(Treetype))
+
+Coverdata <- read.csv("Coverdata.csv")
+  
+Bestuivers_master <- bees_variables %>% 
+  left_join(., syrphids_variables, by = c("Location", "Session", "Treetype")) %>% 
+  mutate(best_AB = b_AB + s_AB, best_SR = b_SR + s_SR) %>% 
+  left_join(., flowerdata, by = c("Location", "Session", "Treetype")) %>% 
+  mutate(Session = as.numeric(Session)) %>% 
+  mutate(Treetype = as.character(Treetype)) %>% 
+  left_join(., SCI_table, by = c("Location", "Treetype")) %>% 
+  left_join(., Coverdata, by = "Location")
+
+Bestuivers_master_spring <- Bestuivers_master %>% filter(Session < 5)
+Bestuivers_master_summer <- Bestuivers_master %>% filter(Session > 4)
+
+source("HighstatLibV10.R")
+variables <- Bestuivers_master[, c(4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20)]
+corvariables<- cor(variables)
+testRes = cor.mtest(variables, conf.level = 0.95)
+corrplot1 <- corrplot(corvariables, method = "number", type = 'lower', order = 'AOE', number.cex = 0.4)
+corrplot2 <- corrplot(corvariables, p.mat = testRes$p, sig.level = 0.10, method = "circle", addCoef.col ='black', type = 'lower', order = 'AOE', number.cex = 0.4, insig='blank')
+
+# The details of four order algorithms, named 'AOE', 'FPC', 'hclust', 'alphabet' are as following.
+# 'AOE' is for the angular order of the eigenvectors. It is calculated from the order of the angles ai
+# ai={arctan(ei2/ei1),arctan(ei2/ei1)+π,if ei1>0;otherwise.
+# where e1
+#  and e2
+#  are the largest two eigenvalues of the correlation matrix. See Michael Friendly (2002) for details.
+
+#------------------
+
+total_pollinators <- Bestuivers_master %>% group_by(Treetype) %>% summarise(total_poll = sum(best_AB), total_bee = sum(b_AB), total_syrphid = sum(s_AB))
+
+total_pollinators_spring <- Bestuivers_master_spring %>% group_by(Treetype) %>% summarise(total_poll = sum(best_AB), total_bee = sum(b_AB), total_syrphid = sum(s_AB))
+
+total_pollinators_summer <- Bestuivers_master_summer %>% group_by(Treetype) %>% summarise(total_poll = sum(best_AB), total_bee = sum(b_AB), total_syrphid = sum(s_AB))
+
+#------------------
+total_s <- s_tidy_complete %>% filter (Count!=0) %>% summarise(total_s_species = n_distinct(Species))
+
+total_s_species <- s_tidy_complete %>% filter (Count!=0) %>% group_by(Treetype) %>% summarise(total_s_species = n_distinct(Species))
+
+total_s_species_spring <- s_tidy_complete %>% filter (Count!=0 & Session < 5) %>% group_by(Treetype) %>% summarise(total_s_species = n_distinct(Species))
+
+total_s_species_summer <- s_tidy_complete %>% filter (Count!=0 & Session > 4) %>% group_by(Treetype) %>% summarise(total_s_species = n_distinct(Species))
+
+#------------------
+total_b <- b_tidy_complete %>% filter (Count!=0) %>% summarise(total_b_species = n_distinct(Species))
+
+total_b_species <- b_tidy_complete %>% filter (Count!=0) %>% group_by(Treetype) %>% summarise(total_b_species = n_distinct(Species))
+
+total_b_species_spring <- b_tidy_complete %>% filter (Count!=0 & Session < 5) %>% group_by(Treetype) %>% summarise(total_b_species = n_distinct(Species))
+
+total_b_species_summer <- b_tidy_complete %>% filter (Count!=0 & Session > 4) %>% group_by(Treetype) %>% summarise(total_b_species = n_distinct(Species))
+
+# ABUNDANCE PER SESSION
+
+## BESTUIVERS
+plotAB_session <- ggplot(data = Bestuivers_master, aes(x = as.factor(Session), y = best_AB, fill = Treetype, colour = Treetype)) + geom_boxplot() + theme(axis.title = element_blank())
+plotAB_session_spring <- ggplot(data = Bestuivers_master_spring, aes(x = as.factor(Session), y = best_AB, fill = Treetype, colour = Treetype)) + geom_boxplot() + theme(axis.title = element_blank())
+plotAB_session_summer <- ggplot(data = Bestuivers_master_summer, aes(x = as.factor(Session), y = best_AB, fill = Treetype, colour = Treetype)) + geom_boxplot() + theme(axis.title = element_blank())
+ggarrange(plotAB_session, plotAB_session_spring, plotAB_session_summer, labels = c("overall", "spring", "summer"), nrow = 1, common.legend = TRUE, legend = "bottom") %>% 
+  annotate_figure(., top = text_grob("Total pollinator abundance per session"))
+
+## BEES
+plotAB_session_b <- ggplot(data = Bestuivers_master, aes(x = as.factor(Session), y = b_AB, fill = Treetype, colour = Treetype)) + geom_boxplot() + theme(axis.title = element_blank())
+plotAB_session_spring_b <- ggplot(data = Bestuivers_master_spring, aes(x = as.factor(Session), y = b_AB, fill = Treetype, colour = Treetype)) + geom_boxplot() + theme(axis.title = element_blank())
+plotAB_session_summer_b <- ggplot(data = Bestuivers_master_summer, aes(x = as.factor(Session), y = b_AB, fill = Treetype, colour = Treetype)) + geom_boxplot() + theme(axis.title = element_blank())
+ggarrange(plotAB_session_b, plotAB_session_spring_b, plotAB_session_summer_b, labels = c("overall", "spring", "summer"), nrow = 1, common.legend = TRUE, legend = "bottom") %>% 
+  annotate_figure(., top = text_grob("Bee abundance per session"))
+
+## SYRPHIDS
+plotAB_session_s <- ggplot(data = Bestuivers_master, aes(x = as.factor(Session), y = s_AB, fill = Treetype, colour = Treetype)) + geom_boxplot() + theme(axis.title = element_blank())
+plotAB_session_spring_s <- ggplot(data = Bestuivers_master_spring, aes(x = as.factor(Session), y = s_AB, fill = Treetype, colour = Treetype)) + geom_boxplot() + theme(axis.title = element_blank())
+plotAB_session_summer_s <- ggplot(data = Bestuivers_master_summer, aes(x = as.factor(Session), y = s_AB, fill = Treetype, colour = Treetype)) + geom_boxplot() + theme(axis.title = element_blank())
+ggarrange(plotAB_session_s, plotAB_session_spring_s, plotAB_session_summer_s, labels = c("overall", "spring", "summer"), nrow = 1, common.legend = TRUE, legend = "bottom")%>% 
+  annotate_figure(., top = text_grob("Syrphid abundance per session"))
+
+# SPECIES RICHNESS PER SESSION
+
+## BESTUIVERS
+plotSR_session <- ggplot(data = Bestuivers_master, aes(x = as.factor(Session), y = best_SR, fill = Treetype, colour = Treetype)) + geom_boxplot() + theme(axis.title = element_blank())
+plotSR_session_spring <- ggplot(data = Bestuivers_master_spring, aes(x = as.factor(Session), y = best_SR, fill = Treetype, colour = Treetype)) + geom_boxplot() + theme(axis.title = element_blank())
+plotSR_session_summer <- ggplot(data = Bestuivers_master_summer, aes(x = as.factor(Session), y = best_SR, fill = Treetype, colour = Treetype)) + geom_boxplot() + theme(axis.title = element_blank())
+ggarrange(plotSR_session, plotSR_session_spring, plotSR_session_summer, labels = c("overall", "spring", "summer"), nrow = 1, common.legend = TRUE, legend = "bottom")%>% 
+  annotate_figure(., top = text_grob("Total pollinator richness per session"))
+
+## BEES
+plotSR_session_b <- ggplot(data = Bestuivers_master, aes(x = as.factor(Session), y = b_SR, fill = Treetype, colour = Treetype)) + geom_boxplot() + theme(axis.title = element_blank())
+plotSR_session_spring_b <- ggplot(data = Bestuivers_master_spring, aes(x = as.factor(Session), y = b_SR, fill = Treetype, colour = Treetype)) + geom_boxplot() + theme(axis.title = element_blank())
+plotSR_session_summer_b <- ggplot(data = Bestuivers_master_summer, aes(x = as.factor(Session), y = b_SR, fill = Treetype, colour = Treetype)) + geom_boxplot() + theme(axis.title = element_blank())
+ggarrange(plotSR_session_b, plotSR_session_spring_b, plotSR_session_summer_b, labels = c("overall", "spring", "summer"), nrow = 1, common.legend = TRUE, legend = "bottom")%>% 
+  annotate_figure(., top = text_grob("Bee richness per session"))
+
+## SYRPHIDS
+plotSR_session_s <- ggplot(data = Bestuivers_master, aes(x = as.factor(Session), y = s_SR, fill = Treetype, colour = Treetype)) + geom_boxplot() + theme(axis.title = element_blank())
+plotSR_session_spring_s <- ggplot(data = Bestuivers_master_spring, aes(x = as.factor(Session), y = s_SR, fill = Treetype, colour = Treetype)) + geom_boxplot() + theme(axis.title = element_blank())
+plotSR_session_summer_s <- ggplot(data = Bestuivers_master_summer, aes(x = as.factor(Session), y = s_SR, fill = Treetype, colour = Treetype)) + geom_boxplot() + theme(axis.title = element_blank())
+ggarrange(plotSR_session_s, plotSR_session_spring_s, plotSR_session_summer_s, labels = c("overall", "spring", "summer"), nrow = 1, common.legend = TRUE, legend = "bottom")%>% 
+  annotate_figure(., top = text_grob("Syrphid richness per session"))
+
+# ABUNDANCE vs FLOWER ABUNDANCE
+
+## BESTUIVERS
+plotAB_flowerAB <- ggplot(data = Bestuivers_master, aes(x = best_AB, y = flower_AB, fill = Treetype, colour = Treetype)) + geom_point() + geom_smooth(method = "lm") + theme(axis.title = element_blank())
+plotAB_flowerAB_spring <- ggplot(data = Bestuivers_master_spring, aes(x = best_AB, y = flower_AB, fill = Treetype, colour = Treetype)) + geom_point() + geom_smooth(method = "lm") + theme(axis.title = element_blank())
+plotAB_flowerAB_summer <- ggplot(data = Bestuivers_master_summer, aes(x = best_AB, y = flower_AB, fill = Treetype, colour = Treetype)) + geom_point() + geom_smooth(method = "lm") + theme(axis.title = element_blank())
+ggarrange(plotAB_flowerAB, plotAB_flowerAB_spring, plotAB_flowerAB_summer, labels = c("overall", "spring", "summer"), nrow = 1, common.legend = TRUE, legend = "bottom")%>% 
+  annotate_figure(., top = text_grob("Total pollinator abundance vs flower abundance"))
+
+## BEES
+plotAB_flowerAB_b <- ggplot(data = Bestuivers_master, aes(x = b_AB, y = flower_AB, fill = Treetype, colour = Treetype)) + geom_point() + geom_smooth(method = "lm") + theme(axis.title = element_blank())
+plotAB_flowerAB_spring_b <- ggplot(data = Bestuivers_master_spring, aes(x = b_AB, y = flower_AB, fill = Treetype, colour = Treetype)) + geom_point() + geom_smooth(method = "lm") + theme(axis.title = element_blank())
+plotAB_flowerAB_summer_b <- ggplot(data = Bestuivers_master_summer, aes(x = b_AB, y = flower_AB, fill = Treetype, colour = Treetype)) + geom_point() + geom_smooth(method = "lm") + theme(axis.title = element_blank())
+ggarrange(plotAB_flowerAB_b, plotAB_flowerAB_spring_b, plotAB_flowerAB_summer_b, labels = c("overall", "spring", "summer"), nrow = 1, common.legend = TRUE, legend = "bottom")%>% 
+  annotate_figure(., top = text_grob("Bee abundance vs flower abundance"))
+
+## SYRPHIDS
+plotAB_flowerAB_s <- ggplot(data = Bestuivers_master, aes(x = s_AB, y = flower_AB, fill = Treetype, colour = Treetype)) + geom_point() + geom_smooth(method = "lm") + theme(axis.title = element_blank())
+plotAB_flowerAB_spring_s <- ggplot(data = Bestuivers_master_spring, aes(x = s_AB, y = flower_AB, fill = Treetype, colour = Treetype)) + geom_point() + geom_smooth(method = "lm") + theme(axis.title = element_blank())
+plotAB_flowerAB_summer_s <- ggplot(data = Bestuivers_master_summer, aes(x = s_AB, y = flower_AB, fill = Treetype, colour = Treetype)) + geom_point() + geom_smooth(method = "lm") + theme(axis.title = element_blank())
+ggarrange(plotAB_flowerAB_s, plotAB_flowerAB_spring_s, plotAB_flowerAB_summer_s, labels = c("overall", "spring", "summer"), nrow = 1, common.legend = TRUE, legend = "bottom")%>% 
+  annotate_figure(., top = text_grob("Syrphid abundance vs flower abundance"))
+
+# ABUNDANCE vs FLOWER RICHNESS
+
+## BESTUIVERS
+plotAB_flowerSR <- ggplot(data = Bestuivers_master, aes(x = best_AB, y = flower_SR, fill = Treetype, colour = Treetype)) + geom_point() + geom_smooth(method = "lm") + theme(axis.title = element_blank())
+plotAB_flowerSR_spring <- ggplot(data = Bestuivers_master_spring, aes(x = best_AB, y = flower_SR, fill = Treetype, colour = Treetype)) + geom_point() + geom_smooth(method = "lm") + theme(axis.title = element_blank())
+plotAB_flowerSR_summer <- ggplot(data = Bestuivers_master_summer, aes(x = best_AB, y = flower_SR, fill = Treetype, colour = Treetype)) + geom_point() + geom_smooth(method = "lm") + theme(axis.title = element_blank())
+ggarrange(plotAB_flowerSR, plotAB_flowerSR_spring, plotAB_flowerSR_summer, labels = c("overall", "spring", "summer"), nrow = 1, common.legend = TRUE, legend = "bottom")%>% 
+  annotate_figure(., top = text_grob("Total pollinator abundance vs flower richness"))
+
+## BEES
+plotAB_flowerSR_b <- ggplot(data = Bestuivers_master, aes(x = b_AB, y = flower_SR, fill = Treetype, colour = Treetype)) + geom_point() + geom_smooth(method = "lm") + theme(axis.title = element_blank())
+plotAB_flowerSR_spring_b <- ggplot(data = Bestuivers_master_spring, aes(x = b_AB, y = flower_SR, fill = Treetype, colour = Treetype)) + geom_point() + geom_smooth(method = "lm") + theme(axis.title = element_blank())
+plotAB_flowerSR_summer_b <- ggplot(data = Bestuivers_master_summer, aes(x = b_AB, y = flower_SR, fill = Treetype, colour = Treetype)) + geom_point() + geom_smooth(method = "lm") + theme(axis.title = element_blank())
+ggarrange(plotAB_flowerSR_b, plotAB_flowerSR_spring_b, plotAB_flowerSR_summer_b, labels = c("overall", "spring", "summer"), nrow = 1, common.legend = TRUE, legend = "bottom")%>% 
+  annotate_figure(., top = text_grob("Bee abundance vs flower richness"))
+
+## SYRPHIDS
+plotAB_flowerSR_s <- ggplot(data = Bestuivers_master, aes(x = s_AB, y = flower_SR, fill = Treetype, colour = Treetype)) + geom_point() + geom_smooth(method = "lm") + theme(axis.title = element_blank())
+plotAB_flowerSR_spring_s <- ggplot(data = Bestuivers_master_spring, aes(x = s_AB, y = flower_SR, fill = Treetype, colour = Treetype)) + geom_point() + geom_smooth(method = "lm") + theme(axis.title = element_blank())
+plotAB_flowerSR_summer_s <- ggplot(data = Bestuivers_master_summer, aes(x = s_AB, y = flower_SR, fill = Treetype, colour = Treetype)) + geom_point() + geom_smooth(method = "lm") + theme(axis.title = element_blank())
+ggarrange(plotAB_flowerSR_s, plotAB_flowerSR_spring_s, plotAB_flowerSR_summer_s, labels = c("overall", "spring", "summer"), nrow = 1, common.legend = TRUE, legend = "bottom")%>% 
+  annotate_figure(., top = text_grob("Syrphid abundance vs flower richness"))
+
+# RICHNESS vs FLOWER ABUNDANCE
+
+## BESTUIVERS
+plotSR_flowerAB <- ggplot(data = Bestuivers_master, aes(x = best_SR, y = flower_AB, fill = Treetype, colour = Treetype)) + geom_point() + geom_smooth(method = "lm") + theme(axis.title = element_blank())
+plotSR_flowerAB_spring <- ggplot(data = Bestuivers_master_spring, aes(x = best_SR, y = flower_AB, fill = Treetype, colour = Treetype)) + geom_point() + geom_smooth(method = "lm") + theme(axis.title = element_blank())
+plotSR_flowerAB_summer <- ggplot(data = Bestuivers_master_summer, aes(x = best_SR, y = flower_AB, fill = Treetype, colour = Treetype)) + geom_point() + geom_smooth(method = "lm") + theme(axis.title = element_blank())
+ggarrange(plotSR_flowerAB, plotSR_flowerAB_spring, plotSR_flowerAB_summer, labels = c("overall", "spring", "summer"), nrow = 1, common.legend = TRUE, legend = "bottom")%>% 
+  annotate_figure(., top = text_grob("Total pollinator richness vs flower abundance"))
+
+## BEES
+plotSR_flowerAB_b <- ggplot(data = Bestuivers_master, aes(x = b_SR, y = flower_AB, fill = Treetype, colour = Treetype)) + geom_point() + geom_smooth(method = "lm") + theme(axis.title = element_blank())
+plotSR_flowerAB_spring_b <- ggplot(data = Bestuivers_master_spring, aes(x = b_SR, y = flower_AB, fill = Treetype, colour = Treetype)) + geom_point() + geom_smooth(method = "lm") + theme(axis.title = element_blank())
+plotSR_flowerAB_summer_b <- ggplot(data = Bestuivers_master_summer, aes(x = b_SR, y = flower_AB, fill = Treetype, colour = Treetype)) + geom_point() + geom_smooth(method = "lm") + theme(axis.title = element_blank())
+ggarrange(plotAB_flowerSR_b, plotAB_flowerSR_spring_b, plotAB_flowerSR_summer_b, labels = c("overall", "spring", "summer"), nrow = 1, common.legend = TRUE, legend = "bottom")%>% 
+  annotate_figure(., top = text_grob("Bee richness vs flower abundance"))
+
+## SYRPHIDS
+plotSR_flowerAB_s <- ggplot(data = Bestuivers_master, aes(x = s_SR, y = flower_AB, fill = Treetype, colour = Treetype)) + geom_point() + geom_smooth(method = "lm") + theme(axis.title = element_blank())
+plotSR_flowerAB_spring_s <- ggplot(data = Bestuivers_master_spring, aes(x = s_SR, y = flower_AB, fill = Treetype, colour = Treetype)) + geom_point() + geom_smooth(method = "lm") + theme(axis.title = element_blank())
+plotSR_flowerAB_summer_s <- ggplot(data = Bestuivers_master_summer, aes(x = s_SR, y = flower_AB, fill = Treetype, colour = Treetype)) + geom_point() + geom_smooth(method = "lm") + theme(axis.title = element_blank())
+ggarrange(plotAB_flowerSR_s, plotAB_flowerSR_spring_s, plotAB_flowerSR_summer_s, labels = c("overall", "spring", "summer"), nrow = 1, common.legend = TRUE, legend = "bottom")%>% 
+  annotate_figure(., top = text_grob("Syrphid richness vs flower abundance"))
+
+# RICHNESS vs FLOWER RICHNESS
+
+## BESTUIVERS
+plotSR_flowerSR <- ggplot(data = Bestuivers_master, aes(x = best_SR, y = flower_SR, fill = Treetype, colour = Treetype)) + geom_point() + geom_smooth(method = "lm") + theme(axis.title = element_blank())
+plotSR_flowerSR_spring <- ggplot(data = Bestuivers_master_spring, aes(x = best_SR, y = flower_SR, fill = Treetype, colour = Treetype)) + geom_point() + geom_smooth(method = "lm") + theme(axis.title = element_blank())
+plotSR_flowerSR_summer <- ggplot(data = Bestuivers_master_summer, aes(x = best_SR, y = flower_SR, fill = Treetype, colour = Treetype)) + geom_point() + geom_smooth(method = "lm") + theme(axis.title = element_blank())
+ggarrange(plotSR_flowerSR, plotSR_flowerSR_spring, plotSR_flowerSR_summer, labels = c("overall", "spring", "summer"), nrow = 1, common.legend = TRUE, legend = "bottom")%>% 
+  annotate_figure(., top = text_grob("Total pollinator richness vs flower richness"))
+
+## BEES
+plotSR_flowerSR_b <- ggplot(data = Bestuivers_master, aes(x = b_SR, y = flower_SR, fill = Treetype, colour = Treetype)) + geom_point() + geom_smooth(method = "lm") + theme(axis.title = element_blank())
+plotSR_flowerSR_spring_b <- ggplot(data = Bestuivers_master_spring, aes(x = b_SR, y = flower_SR, fill = Treetype, colour = Treetype)) + geom_point() + geom_smooth(method = "lm") + theme(axis.title = element_blank())
+plotSR_flowerSR_summer_b <- ggplot(data = Bestuivers_master_summer, aes(x = b_SR, y = flower_SR, fill = Treetype, colour = Treetype)) + geom_point() + geom_smooth(method = "lm") + theme(axis.title = element_blank())
+ggarrange(plotSR_flowerSR_b, plotSR_flowerSR_spring_b, plotSR_flowerSR_summer_b, labels = c("overall", "spring", "summer"), nrow = 1, common.legend = TRUE, legend = "bottom")%>% 
+  annotate_figure(., top = text_grob("Bee richness vs flower richness"))
+
+## SYRPHIDS
+plotSR_flowerSR_s <- ggplot(data = Bestuivers_master, aes(x = s_SR, y = flower_SR, fill = Treetype, colour = Treetype)) + geom_point() + geom_smooth(method = "lm") + theme(axis.title = element_blank())
+plotSR_flowerSR_spring_s <- ggplot(data = Bestuivers_master_spring, aes(x = s_SR, y = flower_SR, fill = Treetype, colour = Treetype)) + geom_point() + geom_smooth(method = "lm") + theme(axis.title = element_blank())
+plotSR_flowerSR_summer_s <- ggplot(data = Bestuivers_master_summer, aes(x = s_SR, y = flower_SR, fill = Treetype, colour = Treetype)) + geom_point() + geom_smooth(method = "lm") + theme(axis.title = element_blank())
+ggarrange(plotSR_flowerSR_s, plotSR_flowerSR_spring_s, plotSR_flowerSR_summer_s, labels = c("overall", "spring", "summer"), nrow = 1, common.legend = TRUE, legend = "bottom")%>% 
+  annotate_figure(., top = text_grob("Syrphid richness vs flower richness"))
+
+# ABUNDANCE vs SCI
+
+## BESTUIVERS
+plotAB_SCI <- ggplot(data = Bestuivers_master, aes(x = best_AB, y = SCI, fill = Treetype, colour = Treetype)) + geom_point() + geom_smooth(method = "lm") + theme(axis.title = element_blank())
+plotAB_SCI_spring <- ggplot(data = Bestuivers_master_spring, aes(x = best_AB, y = SCI, fill = Treetype, colour = Treetype)) + geom_point() + geom_smooth(method = "lm") + theme(axis.title = element_blank())
+plotAB_SCI_summer <- ggplot(data = Bestuivers_master_summer, aes(x = best_AB, y = SCI, fill = Treetype, colour = Treetype)) + geom_point() + geom_smooth(method = "lm") + theme(axis.title = element_blank())
+ggarrange(plotAB_SCI, plotAB_SCI_spring, plotAB_SCI_summer, labels = c("overall", "spring", "summer"), nrow = 1, common.legend = TRUE, legend = "bottom")%>% 
+  annotate_figure(., top = text_grob("Total pollinator abundance vs SCI"))
+
+## BEES
+plotAB_SCI_b <- ggplot(data = Bestuivers_master, aes(x = b_AB, y = SCI, fill = Treetype, colour = Treetype)) + geom_point() + geom_smooth(method = "lm") + theme(axis.title = element_blank())
+plotAB_SCI_spring_b <- ggplot(data = Bestuivers_master_spring, aes(x = b_AB, y = SCI, fill = Treetype, colour = Treetype)) + geom_point() + geom_smooth(method = "lm") + theme(axis.title = element_blank())
+plotAB_SCI_summer_b <- ggplot(data = Bestuivers_master_summer, aes(x = b_AB, y = SCI, fill = Treetype, colour = Treetype)) + geom_point() + geom_smooth(method = "lm") + theme(axis.title = element_blank())
+ggarrange(plotAB_SCI_b, plotAB_SCI_spring_b, plotAB_SCI_summer_b, labels = c("overall", "spring", "summer"), nrow = 1, common.legend = TRUE, legend = "bottom")%>% 
+  annotate_figure(., top = text_grob("Bee abundance vs SCI"))
+
+## SYRPHIDS
+plotAB_SCI_s <- ggplot(data = Bestuivers_master, aes(x = s_AB, y = SCI, fill = Treetype, colour = Treetype)) + geom_point() + geom_smooth(method = "lm") + theme(axis.title = element_blank())
+plotAB_SCI_spring_s <- ggplot(data = Bestuivers_master_spring, aes(x = s_AB, y = SCI, fill = Treetype, colour = Treetype)) + geom_point() + geom_smooth(method = "lm") + theme(axis.title = element_blank())
+plotAB_SCI_summer_s <- ggplot(data = Bestuivers_master_summer, aes(x = s_AB, y = SCI, fill = Treetype, colour = Treetype)) + geom_point() + geom_smooth(method = "lm") + theme(axis.title = element_blank())
+ggarrange(plotAB_SCI_s, plotAB_SCI_spring_s, plotAB_SCI_summer_s, labels = c("overall", "spring", "summer"), nrow = 1, common.legend = TRUE, legend = "bottom")%>% 
+  annotate_figure(., top = text_grob("Syrphid abundance vs SCI"))
+
+# RICHNESS vs SCI
+
+## BESTUIVERS
+plotSR_SCI <- ggplot(data = Bestuivers_master, aes(x = best_SR, y = SCI, fill = Treetype, colour = Treetype)) + geom_point() + geom_smooth(method = "lm") + theme(axis.title = element_blank())
+plotSR_SCI_spring <- ggplot(data = Bestuivers_master_spring, aes(x = best_SR, y = SCI, fill = Treetype, colour = Treetype)) + geom_point() + geom_smooth(method = "lm") + theme(axis.title = element_blank())
+plotSR_SCI_summer <- ggplot(data = Bestuivers_master_summer, aes(x = best_SR, y = SCI, fill = Treetype, colour = Treetype)) + geom_point() + geom_smooth(method = "lm") + theme(axis.title = element_blank())
+ggarrange(plotSR_SCI, plotSR_SCI_spring, plotSR_SCI_summer, labels = c("overall", "spring", "summer"), nrow = 1, common.legend = TRUE, legend = "bottom")%>% 
+  annotate_figure(., top = text_grob("Total pollinator richness vs SCI"))
+
+## BEES
+plotSR_SCI_b <- ggplot(data = Bestuivers_master, aes(x = b_SR, y = SCI, fill = Treetype, colour = Treetype)) + geom_point() + geom_smooth(method = "lm") + theme(axis.title = element_blank())
+plotSR_SCI_spring_b <- ggplot(data = Bestuivers_master_spring, aes(x = b_SR, y = SCI, fill = Treetype, colour = Treetype)) + geom_point() + geom_smooth(method = "lm") + theme(axis.title = element_blank())
+plotSR_SCI_summer_b <- ggplot(data = Bestuivers_master_summer, aes(x = b_SR, y = SCI, fill = Treetype, colour = Treetype)) + geom_point() + geom_smooth(method = "lm") + theme(axis.title = element_blank())
+ggarrange(plotSR_SCI_b, plotSR_SCI_spring_b, plotSR_SCI_summer_b, labels = c("overall", "spring", "summer"), nrow = 1, common.legend = TRUE, legend = "bottom")%>% 
+  annotate_figure(., top = text_grob("Bee richness vs SCI"))
+
+## SYRPHIDS
+plotSR_SCI_s <- ggplot(data = Bestuivers_master, aes(x = s_SR, y = SCI, fill = Treetype, colour = Treetype)) + geom_point() + geom_smooth(method = "lm") + theme(axis.title = element_blank())
+plotSR_SCI_spring_s <- ggplot(data = Bestuivers_master_spring, aes(x = s_SR, y = SCI, fill = Treetype, colour = Treetype)) + geom_point() + geom_smooth(method = "lm") + theme(axis.title = element_blank())
+plotSR_SCI_summer_s <- ggplot(data = Bestuivers_master_summer, aes(x = s_SR, y = SCI, fill = Treetype, colour = Treetype)) + geom_point() + geom_smooth(method = "lm") + theme(axis.title = element_blank())
+ggarrange(plotSR_SCI_s, plotSR_SCI_spring_s, plotSR_SCI_summer_s, labels = c("overall", "spring", "summer"), nrow = 1, common.legend = TRUE, legend = "bottom")%>% 
+  annotate_figure(., top = text_grob("Syrphid richness vs SCI"))
+
+# ABUNDANCE vs SCI-herblayer
+
+## BESTUIVERS
+plotAB_herb <- ggplot(data = Bestuivers_master, aes(x = best_AB, y = herbal_layer, fill = Treetype, colour = Treetype)) + geom_point() + geom_smooth(method = "lm") + theme(axis.title = element_blank())
+plotAB_herb_spring <- ggplot(data = Bestuivers_master_spring, aes(x = best_AB, y = herbal_layer, fill = Treetype, colour = Treetype)) + geom_point() + geom_smooth(method = "lm") + theme(axis.title = element_blank())
+plotAB_herb_summer <- ggplot(data = Bestuivers_master_summer, aes(x = best_AB, y = herbal_layer, fill = Treetype, colour = Treetype)) + geom_point() + geom_smooth(method = "lm") + theme(axis.title = element_blank())
+ggarrange(plotAB_herb, plotAB_herb_spring, plotAB_herb_summer, labels = c("overall", "spring", "summer"), nrow = 1, common.legend = TRUE, legend = "bottom")%>% 
+  annotate_figure(., top = text_grob("Total pollinator abundance vs herbal layer"))
+
+## BEES
+plotAB_herb_b <- ggplot(data = Bestuivers_master, aes(x = b_AB, y = herbal_layer, fill = Treetype, colour = Treetype)) + geom_point() + geom_smooth(method = "lm") + theme(axis.title = element_blank())
+plotAB_herb_spring_b <- ggplot(data = Bestuivers_master_spring, aes(x = b_AB, y = herbal_layer, fill = Treetype, colour = Treetype)) + geom_point() + geom_smooth(method = "lm") + theme(axis.title = element_blank())
+plotAB_herb_summer_b <- ggplot(data = Bestuivers_master_summer, aes(x = b_AB, y = herbal_layer, fill = Treetype, colour = Treetype)) + geom_point() + geom_smooth(method = "lm") + theme(axis.title = element_blank())
+ggarrange(plotAB_herb_b, plotAB_herb_spring_b, plotAB_herb_summer_b, labels = c("overall", "spring", "summer"), nrow = 1, common.legend = TRUE, legend = "bottom")%>% 
+  annotate_figure(., top = text_grob("Bee abundance vs herbal layer"))
+
+## SYRPHIDS
+plotAB_herb_s <- ggplot(data = Bestuivers_master, aes(x = s_AB, y = herbal_layer, fill = Treetype, colour = Treetype)) + geom_point() + geom_smooth(method = "lm") + theme(axis.title = element_blank())
+plotAB_herb_spring_s <- ggplot(data = Bestuivers_master_spring, aes(x = s_AB, y = herbal_layer, fill = Treetype, colour = Treetype)) + geom_point() + geom_smooth(method = "lm") + theme(axis.title = element_blank())
+plotAB_herb_summer_s <- ggplot(data = Bestuivers_master_summer, aes(x = s_AB, y = herbal_layer, fill = Treetype, colour = Treetype)) + geom_point() + geom_smooth(method = "lm") + theme(axis.title = element_blank())
+ggarrange(plotAB_herb_s, plotAB_herb_spring_s, plotAB_herb_summer_s, labels = c("overall", "spring", "summer"), nrow = 1, common.legend = TRUE, legend = "bottom")%>% 
+  annotate_figure(., top = text_grob("Syrphid abundance vs herbal layer"))
+
+# RICHNESS vs SCI-herblayer
+
+## BESTUIVERS
+plotSR_herb <- ggplot(data = Bestuivers_master, aes(x = best_SR, y = herbal_layer, fill = Treetype, colour = Treetype)) + geom_point() + geom_smooth(method = "lm") + theme(axis.title = element_blank())
+plotSR_herb_spring <- ggplot(data = Bestuivers_master_spring, aes(x = best_SR, y = herbal_layer, fill = Treetype, colour = Treetype)) + geom_point() + geom_smooth(method = "lm") + theme(axis.title = element_blank())
+plotSR_herb_summer <- ggplot(data = Bestuivers_master_summer, aes(x = best_SR, y = herbal_layer, fill = Treetype, colour = Treetype)) + geom_point() + geom_smooth(method = "lm") + theme(axis.title = element_blank())
+ggarrange(plotSR_herb, plotSR_herb_spring, plotSR_herb_summer, labels = c("overall", "spring", "summer"), nrow = 1, common.legend = TRUE, legend = "bottom")%>% 
+  annotate_figure(., top = text_grob("Total pollinator richness vs herbal layer"))
+
+## BEES
+plotSR_herb_b <- ggplot(data = Bestuivers_master, aes(x = b_SR, y = herbal_layer, fill = Treetype, colour = Treetype)) + geom_point() + geom_smooth(method = "lm") + theme(axis.title = element_blank())
+plotSR_herb_spring_b <- ggplot(data = Bestuivers_master_spring, aes(x = b_SR, y = herbal_layer, fill = Treetype, colour = Treetype)) + geom_point() + geom_smooth(method = "lm") + theme(axis.title = element_blank())
+plotSR_herb_summer_b <- ggplot(data = Bestuivers_master_summer, aes(x = b_SR, y = herbal_layer, fill = Treetype, colour = Treetype)) + geom_point() + geom_smooth(method = "lm") + theme(axis.title = element_blank())
+ggarrange(plotSR_herb_b, plotSR_herb_spring_b, plotSR_herb_summer_b, labels = c("overall", "spring", "summer"), nrow = 1, common.legend = TRUE, legend = "bottom")%>% 
+  annotate_figure(., top = text_grob("Bee richness vs herbal layer"))
+
+## SYRPHIDS
+plotSR_herb_s <- ggplot(data = Bestuivers_master, aes(x = s_SR, y = herbal_layer, fill = Treetype, colour = Treetype)) + geom_point() + geom_smooth(method = "lm") + theme(axis.title = element_blank())
+plotSR_herb_spring_s <- ggplot(data = Bestuivers_master_spring, aes(x = s_SR, y = herbal_layer, fill = Treetype, colour = Treetype)) + geom_point() + geom_smooth(method = "lm") + theme(axis.title = element_blank())
+plotSR_herb_summer_s <- ggplot(data = Bestuivers_master_summer, aes(x = s_SR, y = herbal_layer, fill = Treetype, colour = Treetype)) + geom_point() + geom_smooth(method = "lm") + theme(axis.title = element_blank())
+ggarrange(plotSR_herb_s, plotSR_herb_spring_s, plotSR_herb_summer_s, labels = c("overall", "spring", "summer"), nrow = 1, common.legend = TRUE, legend = "bottom")%>% 
+  annotate_figure(., top = text_grob("Syrphid richness vs herbal layer"))
+
+# ABUNDANCE vs SCI-woodylayer
+
+## BESTUIVERS
+plotAB_woody <- ggplot(data = Bestuivers_master, aes(x = best_AB, y = woody_layer, fill = Treetype, colour = Treetype)) + geom_point() + geom_smooth(method = "lm") + theme(axis.title = element_blank())
+plotAB_woody_spring <- ggplot(data = Bestuivers_master_spring, aes(x = best_AB, y = woody_layer, fill = Treetype, colour = Treetype)) + geom_point() + geom_smooth(method = "lm") + theme(axis.title = element_blank())
+plotAB_woody_summer <- ggplot(data = Bestuivers_master_summer, aes(x = best_AB, y = woody_layer, fill = Treetype, colour = Treetype)) + geom_point() + geom_smooth(method = "lm") + theme(axis.title = element_blank())
+ggarrange(plotAB_woody, plotAB_woody_spring, plotAB_woody_summer, labels = c("overall", "spring", "summer"), nrow = 1, common.legend = TRUE, legend = "bottom")%>% 
+  annotate_figure(., top = text_grob("Total pollinator abundance vs woody layer"))
+
+## BEES
+plotAB_woody_b <- ggplot(data = Bestuivers_master, aes(x = b_AB, y = woody_layer, fill = Treetype, colour = Treetype)) + geom_point() + geom_smooth(method = "lm") + theme(axis.title = element_blank())
+plotAB_woody_spring_b <- ggplot(data = Bestuivers_master_spring, aes(x = b_AB, y = woody_layer, fill = Treetype, colour = Treetype)) + geom_point() + geom_smooth(method = "lm") + theme(axis.title = element_blank())
+plotAB_woody_summer_b <- ggplot(data = Bestuivers_master_summer, aes(x = b_AB, y = woody_layer, fill = Treetype, colour = Treetype)) + geom_point() + geom_smooth(method = "lm") + theme(axis.title = element_blank())
+ggarrange(plotAB_woody_b, plotAB_woody_spring_b, plotAB_woody_summer_b, labels = c("overall", "spring", "summer"), nrow = 1, common.legend = TRUE, legend = "bottom")%>% 
+  annotate_figure(., top = text_grob("Bee abundance vs woody layer"))
+
+## SYRPHIDS
+plotAB_woody_s <- ggplot(data = Bestuivers_master, aes(x = s_AB, y = woody_layer, fill = Treetype, colour = Treetype)) + geom_point() + geom_smooth(method = "lm") + theme(axis.title = element_blank())
+plotAB_woody_spring_s <- ggplot(data = Bestuivers_master_spring, aes(x = s_AB, y = woody_layer, fill = Treetype, colour = Treetype)) + geom_point() + geom_smooth(method = "lm") + theme(axis.title = element_blank())
+plotAB_woody_summer_s <- ggplot(data = Bestuivers_master_summer, aes(x = s_AB, y = woody_layer, fill = Treetype, colour = Treetype)) + geom_point() + geom_smooth(method = "lm") + theme(axis.title = element_blank())
+ggarrange(plotAB_woody_s, plotAB_woody_spring_s, plotAB_woody_summer_s, labels = c("overall", "spring", "summer"), nrow = 1, common.legend = TRUE, legend = "bottom")%>% 
+  annotate_figure(., top = text_grob("Syrphid abundance vs woody layer"))
+
+# RICHNESS vs SCI-woodylayer
+
+## BESTUIVERS
+plotSR_woody <- ggplot(data = Bestuivers_master, aes(x = best_SR, y = woody_layer, fill = Treetype, colour = Treetype)) + geom_point() + geom_smooth(method = "lm") + theme(axis.title = element_blank())
+plotSR_woody_spring <- ggplot(data = Bestuivers_master_spring, aes(x = best_SR, y = woody_layer, fill = Treetype, colour = Treetype)) + geom_point() + geom_smooth(method = "lm") + theme(axis.title = element_blank())
+plotSR_woody_summer <- ggplot(data = Bestuivers_master_summer, aes(x = best_SR, y = woody_layer, fill = Treetype, colour = Treetype)) + geom_point() + geom_smooth(method = "lm") + theme(axis.title = element_blank())
+ggarrange(plotSR_woody, plotSR_woody_spring, plotSR_woody_summer, labels = c("overall", "spring", "summer"), nrow = 1, common.legend = TRUE, legend = "bottom")%>% 
+  annotate_figure(., top = text_grob("Total pollinator richness vs woody layer"))
+
+## BEES
+plotSR_woody_b <- ggplot(data = Bestuivers_master, aes(x = b_SR, y = woody_layer, fill = Treetype, colour = Treetype)) + geom_point() + geom_smooth(method = "lm") + theme(axis.title = element_blank())
+plotSR_woody_spring_b <- ggplot(data = Bestuivers_master_spring, aes(x = b_SR, y = woody_layer, fill = Treetype, colour = Treetype)) + geom_point() + geom_smooth(method = "lm") + theme(axis.title = element_blank())
+plotSR_woody_summer_b <- ggplot(data = Bestuivers_master_summer, aes(x = b_SR, y = woody_layer, fill = Treetype, colour = Treetype)) + geom_point() + geom_smooth(method = "lm") + theme(axis.title = element_blank())
+ggarrange(plotSR_woody_b, plotSR_woody_spring_b, plotSR_woody_summer_b, labels = c("overall", "spring", "summer"), nrow = 1, common.legend = TRUE, legend = "bottom")%>% 
+  annotate_figure(., top = text_grob("Bee richness vs woody layer"))
+
+## SYRPHIDS
+plotSR_woody_s <- ggplot(data = Bestuivers_master, aes(x = s_SR, y = woody_layer, fill = Treetype, colour = Treetype)) + geom_point() + geom_smooth(method = "lm") + theme(axis.title = element_blank())
+plotSR_woody_spring_s <- ggplot(data = Bestuivers_master_spring, aes(x = s_SR, y = woody_layer, fill = Treetype, colour = Treetype)) + geom_point() + geom_smooth(method = "lm") + theme(axis.title = element_blank())
+plotSR_woody_summer_s <- ggplot(data = Bestuivers_master_summer, aes(x = s_SR, y = woody_layer, fill = Treetype, colour = Treetype)) + geom_point() + geom_smooth(method = "lm") + theme(axis.title = element_blank())
+ggarrange(plotSR_woody_s, plotSR_woody_spring_s, plotSR_woody_summer_s, labels = c("overall", "spring", "summer"), nrow = 1, common.legend = TRUE, legend = "bottom")%>% 
+  annotate_figure(., top = text_grob("Syrphid richness vs woody layer"))
+
+# ABUNDANCE vs SCI-forest structure
+
+## BESTUIVERS
+plotAB_forest <- ggplot(data = Bestuivers_master, aes(x = best_AB, y = forest_structure, fill = Treetype, colour = Treetype)) + geom_point() + geom_smooth(method = "lm") + theme(axis.title = element_blank())
+plotAB_forest_spring <- ggplot(data = Bestuivers_master_spring, aes(x = best_AB, y = forest_structure, fill = Treetype, colour = Treetype)) + geom_point() + geom_smooth(method = "lm") + theme(axis.title = element_blank())
+plotAB_forest_summer <- ggplot(data = Bestuivers_master_summer, aes(x = best_AB, y = forest_structure, fill = Treetype, colour = Treetype)) + geom_point() + geom_smooth(method = "lm") + theme(axis.title = element_blank())
+ggarrange(plotAB_forest, plotAB_forest_spring, plotAB_forest_summer, labels = c("overall", "spring", "summer"), nrow = 1, common.legend = TRUE, legend = "bottom")%>% 
+  annotate_figure(., top = text_grob("Total pollinator abundance vs forest structure"))
+
+## BEES
+plotAB_forest_b <- ggplot(data = Bestuivers_master, aes(x = b_AB, y = forest_structure, fill = Treetype, colour = Treetype)) + geom_point() + geom_smooth(method = "lm") + theme(axis.title = element_blank())
+plotAB_forest_spring_b <- ggplot(data = Bestuivers_master_spring, aes(x = b_AB, y = forest_structure, fill = Treetype, colour = Treetype)) + geom_point() + geom_smooth(method = "lm") + theme(axis.title = element_blank())
+plotAB_forest_summer_b <- ggplot(data = Bestuivers_master_summer, aes(x = b_AB, y = forest_structure, fill = Treetype, colour = Treetype)) + geom_point() + geom_smooth(method = "lm") + theme(axis.title = element_blank())
+ggarrange(plotAB_forest_b, plotAB_forest_spring_b, plotAB_forest_summer_b, labels = c("overall", "spring", "summer"), nrow = 1, common.legend = TRUE, legend = "bottom")%>% 
+  annotate_figure(., top = text_grob("Bee abundance vs forest structure"))
+
+## SYRPHIDS
+plotAB_forest_s <- ggplot(data = Bestuivers_master, aes(x = s_AB, y = forest_structure, fill = Treetype, colour = Treetype)) + geom_point() + geom_smooth(method = "lm") + theme(axis.title = element_blank())
+plotAB_forest_spring_s <- ggplot(data = Bestuivers_master_spring, aes(x = s_AB, y = forest_structure, fill = Treetype, colour = Treetype)) + geom_point() + geom_smooth(method = "lm") + theme(axis.title = element_blank())
+plotAB_forest_summer_s <- ggplot(data = Bestuivers_master_summer, aes(x = s_AB, y = forest_structure, fill = Treetype, colour = Treetype)) + geom_point() + geom_smooth(method = "lm") + theme(axis.title = element_blank())
+ggarrange(plotAB_forest_s, plotAB_forest_spring_s, plotAB_forest_summer_s, labels = c("overall", "spring", "summer"), nrow = 1, common.legend = TRUE, legend = "bottom")%>% 
+  annotate_figure(., top = text_grob("Syrphid abundance vs forest structure"))
+
+# RICHNESS vs SCI-forest structure
+
+## BESTUIVERS
+plotSR_forest <- ggplot(data = Bestuivers_master, aes(x = best_SR, y = forest_structure, fill = Treetype, colour = Treetype)) + geom_point() + geom_smooth(method = "lm") + theme(axis.title = element_blank())
+plotSR_forest_spring <- ggplot(data = Bestuivers_master_spring, aes(x = best_SR, y = forest_structure, fill = Treetype, colour = Treetype)) + geom_point() + geom_smooth(method = "lm") + theme(axis.title = element_blank())
+plotSR_forest_summer <- ggplot(data = Bestuivers_master_summer, aes(x = best_SR, y = forest_structure, fill = Treetype, colour = Treetype)) + geom_point() + geom_smooth(method = "lm") + theme(axis.title = element_blank())
+ggarrange(plotSR_forest, plotSR_forest_spring, plotSR_forest_summer, labels = c("overall", "spring", "summer"), nrow = 1, common.legend = TRUE, legend = "bottom")%>% 
+  annotate_figure(., top = text_grob("Total pollinator richness vs forest structure"))
+
+## BEES
+plotSR_forest_b <- ggplot(data = Bestuivers_master, aes(x = b_SR, y = forest_structure, fill = Treetype, colour = Treetype)) + geom_point() + geom_smooth(method = "lm") + theme(axis.title = element_blank())
+plotSR_forest_spring_b <- ggplot(data = Bestuivers_master_spring, aes(x = b_SR, y = forest_structure, fill = Treetype, colour = Treetype)) + geom_point() + geom_smooth(method = "lm") + theme(axis.title = element_blank())
+plotSR_forest_summer_b <- ggplot(data = Bestuivers_master_summer, aes(x = b_SR, y = forest_structure, fill = Treetype, colour = Treetype)) + geom_point() + geom_smooth(method = "lm") + theme(axis.title = element_blank())
+ggarrange(plotSR_forest_b, plotSR_forest_spring_b, plotSR_forest_summer_b, labels = c("overall", "spring", "summer"), nrow = 1, common.legend = TRUE, legend = "bottom")%>% 
+  annotate_figure(., top = text_grob("Bee richness vs forest structure"))
+
+## SYRPHIDS
+plotSR_forest_s <- ggplot(data = Bestuivers_master, aes(x = s_SR, y = forest_structure, fill = Treetype, colour = Treetype)) + geom_point() + geom_smooth(method = "lm") + theme(axis.title = element_blank())
+plotSR_forest_spring_s <- ggplot(data = Bestuivers_master_spring, aes(x = s_SR, y = forest_structure, fill = Treetype, colour = Treetype)) + geom_point() + geom_smooth(method = "lm") + theme(axis.title = element_blank())
+plotSR_forest_summer_s <- ggplot(data = Bestuivers_master_summer, aes(x = s_SR, y = forest_structure, fill = Treetype, colour = Treetype)) + geom_point() + geom_smooth(method = "lm") + theme(axis.title = element_blank())
+ggarrange(plotSR_forest_s, plotSR_forest_spring_s, plotSR_forest_summer_s, labels = c("overall", "spring", "summer"), nrow = 1, common.legend = TRUE, legend = "bottom")%>% 
+  annotate_figure(., top = text_grob("Syrphid richness vs forest structure"))
+
+# ABUNDANCE vs SCI-dead wood
+
+## BESTUIVERS
+plotAB_deadwood <- ggplot(data = Bestuivers_master, aes(x = best_AB, y = dead_wood, fill = Treetype, colour = Treetype)) + geom_point() + geom_smooth(method = "lm") + theme(axis.title = element_blank())
+plotAB_deadwood_spring <- ggplot(data = Bestuivers_master_spring, aes(x = best_AB, y = dead_wood, fill = Treetype, colour = Treetype)) + geom_point() + geom_smooth(method = "lm") + theme(axis.title = element_blank())
+plotAB_deadwood_summer <- ggplot(data = Bestuivers_master_summer, aes(x = best_AB, y = dead_wood, fill = Treetype, colour = Treetype)) + geom_point() + geom_smooth(method = "lm") + theme(axis.title = element_blank())
+ggarrange(plotAB_deadwood, plotAB_deadwood_spring, plotAB_deadwood_summer, labels = c("overall", "spring", "summer"), nrow = 1, common.legend = TRUE, legend = "bottom")%>% 
+  annotate_figure(., top = text_grob("Total pollinator abundance vs dead wood"))
+
+## BEES
+plotAB_deadwood_b <- ggplot(data = Bestuivers_master, aes(x = b_AB, y = dead_wood, fill = Treetype, colour = Treetype)) + geom_point() + geom_smooth(method = "lm") + theme(axis.title = element_blank())
+plotAB_deadwood_spring_b <- ggplot(data = Bestuivers_master_spring, aes(x = b_AB, y = dead_wood, fill = Treetype, colour = Treetype)) + geom_point() + geom_smooth(method = "lm") + theme(axis.title = element_blank())
+plotAB_deadwood_summer_b <- ggplot(data = Bestuivers_master_summer, aes(x = b_AB, y = dead_wood, fill = Treetype, colour = Treetype)) + geom_point() + geom_smooth(method = "lm") + theme(axis.title = element_blank())
+ggarrange(plotAB_deadwood_b, plotAB_deadwood_spring_b, plotAB_deadwood_summer_b, labels = c("overall", "spring", "summer"), nrow = 1, common.legend = TRUE, legend = "bottom")%>% 
+  annotate_figure(., top = text_grob("Bee abundance vs dead wood"))
+
+## SYRPHIDS
+plotAB_deadwood_s <- ggplot(data = Bestuivers_master, aes(x = s_AB, y = dead_wood, fill = Treetype, colour = Treetype)) + geom_point() + geom_smooth(method = "lm") + theme(axis.title = element_blank())
+plotAB_deadwood_spring_s <- ggplot(data = Bestuivers_master_spring, aes(x = s_AB, y = dead_wood, fill = Treetype, colour = Treetype)) + geom_point() + geom_smooth(method = "lm") + theme(axis.title = element_blank())
+plotAB_deadwood_summer_s <- ggplot(data = Bestuivers_master_summer, aes(x = s_AB, y = dead_wood, fill = Treetype, colour = Treetype)) + geom_point() + geom_smooth(method = "lm") + theme(axis.title = element_blank())
+ggarrange(plotAB_deadwood_s, plotAB_deadwood_spring_s, plotAB_deadwood_summer_s, labels = c("overall", "spring", "summer"), nrow = 1, common.legend = TRUE, legend = "bottom")%>% 
+  annotate_figure(., top = text_grob("Syrphid abundance vs dead wood"))
+
+# RICHNESS vs SCI-dead wood
+
+## BESTUIVERS
+plotSR_deadwood <- ggplot(data = Bestuivers_master, aes(x = best_SR, y = dead_wood, fill = Treetype, colour = Treetype)) + geom_point() + geom_smooth(method = "lm") + theme(axis.title = element_blank())
+plotSR_deadwood_spring <- ggplot(data = Bestuivers_master_spring, aes(x = best_SR, y = dead_wood, fill = Treetype, colour = Treetype)) + geom_point() + geom_smooth(method = "lm") + theme(axis.title = element_blank())
+plotSR_deadwood_summer <- ggplot(data = Bestuivers_master_summer, aes(x = best_SR, y = dead_wood, fill = Treetype, colour = Treetype)) + geom_point() + geom_smooth(method = "lm") + theme(axis.title = element_blank())
+ggarrange(plotSR_deadwood, plotSR_deadwood_spring, plotSR_deadwood_summer, labels = c("overall", "spring", "summer"), nrow = 1, common.legend = TRUE, legend = "bottom")%>% 
+  annotate_figure(., top = text_grob("Total pollinator richness vs dead wood"))
+
+## BEES
+plotSR_deadwood_b <- ggplot(data = Bestuivers_master, aes(x = b_SR, y = dead_wood, fill = Treetype, colour = Treetype)) + geom_point() + geom_smooth(method = "lm") + theme(axis.title = element_blank())
+plotSR_deadwood_spring_b <- ggplot(data = Bestuivers_master_spring, aes(x = b_SR, y = dead_wood, fill = Treetype, colour = Treetype)) + geom_point() + geom_smooth(method = "lm") + theme(axis.title = element_blank())
+plotSR_deadwood_summer_b <- ggplot(data = Bestuivers_master_summer, aes(x = b_SR, y = dead_wood, fill = Treetype, colour = Treetype)) + geom_point() + geom_smooth(method = "lm") + theme(axis.title = element_blank())
+ggarrange(plotSR_deadwood_b, plotSR_deadwood_spring_b, plotSR_deadwood_summer_b, labels = c("overall", "spring", "summer"), nrow = 1, common.legend = TRUE, legend = "bottom")%>% 
+  annotate_figure(., top = text_grob("Bee richness vs dead wood"))
+
+## SYRPHIDS
+plotSR_deadwood_s <- ggplot(data = Bestuivers_master, aes(x = s_SR, y = dead_wood, fill = Treetype, colour = Treetype)) + geom_point() + geom_smooth(method = "lm") + theme(axis.title = element_blank())
+plotSR_deadwood_spring_s <- ggplot(data = Bestuivers_master_spring, aes(x = s_SR, y = dead_wood, fill = Treetype, colour = Treetype)) + geom_point() + geom_smooth(method = "lm") + theme(axis.title = element_blank())
+plotSR_deadwood_summer_s <- ggplot(data = Bestuivers_master_summer, aes(x = s_SR, y = dead_wood, fill = Treetype, colour = Treetype)) + geom_point() + geom_smooth(method = "lm") + theme(axis.title = element_blank())
+ggarrange(plotSR_deadwood_s, plotSR_deadwood_spring_s, plotSR_deadwood_summer_s, labels = c("overall", "spring", "summer"), nrow = 1, common.legend = TRUE, legend = "bottom")%>% 
+  annotate_figure(., top = text_grob("Syrphid richness vs dead wood"))
+
+# ABUNDANCE vs Totalcover
+
+## BESTUIVERS
+plotAB_Totalcover <- ggplot(data = Bestuivers_master, aes(x = best_AB, y = Totalcover, fill = Treetype, colour = Treetype)) + geom_point() + geom_smooth(method = "lm") + theme(axis.title = element_blank())
+plotAB_Totalcover_spring <- ggplot(data = Bestuivers_master_spring, aes(x = best_AB, y = Totalcover, fill = Treetype, colour = Treetype)) + geom_point() + geom_smooth(method = "lm") + theme(axis.title = element_blank())
+plotAB_Totalcover_summer <- ggplot(data = Bestuivers_master_summer, aes(x = best_AB, y = Totalcover, fill = Treetype, colour = Treetype)) + geom_point() + geom_smooth(method = "lm") + theme(axis.title = element_blank())
+ggarrange(plotAB_Totalcover, plotAB_Totalcover_spring, plotAB_Totalcover_summer, labels = c("overall", "spring", "summer"), nrow = 1, common.legend = TRUE, legend = "bottom")%>% 
+  annotate_figure(., top = text_grob("Total pollinator abundance vs total cover"))
+
+## BEES
+plotAB_Totalcover_b <- ggplot(data = Bestuivers_master, aes(x = b_AB, y = Totalcover, fill = Treetype, colour = Treetype)) + geom_point() + geom_smooth(method = "lm") + theme(axis.title = element_blank())
+plotAB_Totalcover_spring_b <- ggplot(data = Bestuivers_master_spring, aes(x = b_AB, y = Totalcover, fill = Treetype, colour = Treetype)) + geom_point() + geom_smooth(method = "lm") + theme(axis.title = element_blank())
+plotAB_Totalcover_summer_b <- ggplot(data = Bestuivers_master_summer, aes(x = b_AB, y = Totalcover, fill = Treetype, colour = Treetype)) + geom_point() + geom_smooth(method = "lm") + theme(axis.title = element_blank())
+ggarrange(plotAB_Totalcover_b, plotAB_Totalcover_spring_b, plotAB_Totalcover_summer_b, labels = c("overall", "spring", "summer"), nrow = 1, common.legend = TRUE, legend = "bottom")%>% 
+  annotate_figure(., top = text_grob("Bee abundance vs total cover"))
+
+## SYRPHIDS
+plotAB_Totalcover_s <- ggplot(data = Bestuivers_master, aes(x = s_AB, y = Totalcover, fill = Treetype, colour = Treetype)) + geom_point() + geom_smooth(method = "lm") + theme(axis.title = element_blank())
+plotAB_Totalcover_spring_s <- ggplot(data = Bestuivers_master_spring, aes(x = s_AB, y = Totalcover, fill = Treetype, colour = Treetype)) + geom_point() + geom_smooth(method = "lm") + theme(axis.title = element_blank())
+plotAB_Totalcover_summer_s <- ggplot(data = Bestuivers_master_summer, aes(x = s_AB, y = Totalcover, fill = Treetype, colour = Treetype)) + geom_point() + geom_smooth(method = "lm") + theme(axis.title = element_blank())
+ggarrange(plotAB_Totalcover_s, plotAB_Totalcover_spring_s, plotAB_Totalcover_summer_s, labels = c("overall", "spring", "summer"), nrow = 1, common.legend = TRUE, legend = "bottom")%>% 
+  annotate_figure(., top = text_grob("Syrphid abundance vs total cover"))
+
+# RICHNESS vs Totalcover
+
+## BESTUIVERS
+plotSR_Totalcover <- ggplot(data = Bestuivers_master, aes(x = best_SR, y = Totalcover, fill = Treetype, colour = Treetype)) + geom_point() + geom_smooth(method = "lm") + theme(axis.title = element_blank())
+plotSR_Totalcover_spring <- ggplot(data = Bestuivers_master_spring, aes(x = best_SR, y = Totalcover, fill = Treetype, colour = Treetype)) + geom_point() + geom_smooth(method = "lm") + theme(axis.title = element_blank())
+plotSR_Totalcover_summer <- ggplot(data = Bestuivers_master_summer, aes(x = best_SR, y = Totalcover, fill = Treetype, colour = Treetype)) + geom_point() + geom_smooth(method = "lm") + theme(axis.title = element_blank())
+ggarrange(plotSR_Totalcover, plotSR_Totalcover_spring, plotSR_Totalcover_summer, labels = c("overall", "spring", "summer"), nrow = 1, common.legend = TRUE, legend = "bottom")%>% 
+  annotate_figure(., top = text_grob("Total pollinator richness vs total cover"))
+
+## BEES
+plotSR_Totalcover_b <- ggplot(data = Bestuivers_master, aes(x = b_SR, y = Totalcover, fill = Treetype, colour = Treetype)) + geom_point() + geom_smooth(method = "lm") + theme(axis.title = element_blank())
+plotSR_Totalcover_spring_b <- ggplot(data = Bestuivers_master_spring, aes(x = b_SR, y = Totalcover, fill = Treetype, colour = Treetype)) + geom_point() + geom_smooth(method = "lm") + theme(axis.title = element_blank())
+plotSR_Totalcover_summer_b <- ggplot(data = Bestuivers_master_summer, aes(x = b_SR, y = Totalcover, fill = Treetype, colour = Treetype)) + geom_point() + geom_smooth(method = "lm") + theme(axis.title = element_blank())
+ggarrange(plotSR_Totalcover_b, plotSR_Totalcover_spring_b, plotSR_Totalcover_summer_b, labels = c("overall", "spring", "summer"), nrow = 1, common.legend = TRUE, legend = "bottom")%>% 
+  annotate_figure(., top = text_grob("Bee richness vs total cover"))
+
+## SYRPHIDS
+plotSR_Totalcover_s <- ggplot(data = Bestuivers_master, aes(x = s_SR, y = Totalcover, fill = Treetype, colour = Treetype)) + geom_point() + geom_smooth(method = "lm") + theme(axis.title = element_blank())
+plotSR_Totalcover_spring_s <- ggplot(data = Bestuivers_master_spring, aes(x = s_SR, y = Totalcover, fill = Treetype, colour = Treetype)) + geom_point() + geom_smooth(method = "lm") + theme(axis.title = element_blank())
+plotSR_Totalcover_summer_s <- ggplot(data = Bestuivers_master_summer, aes(x = s_SR, y = Totalcover, fill = Treetype, colour = Treetype)) + geom_point() + geom_smooth(method = "lm") + theme(axis.title = element_blank())
+ggarrange(plotSR_Totalcover_s, plotSR_Totalcover_spring_s, plotSR_Totalcover_summer_s, labels = c("overall", "spring", "summer"), nrow = 1, common.legend = TRUE, legend = "bottom")%>% 
+  annotate_figure(., top = text_grob("Syrphid richness vs total cover"))
+
+# ABUNDANCE vs Treecover
+
+## BESTUIVERS
+plotAB_Treecover <- ggplot(data = Bestuivers_master, aes(x = best_AB, y = Treecover, fill = Treetype, colour = Treetype)) + geom_point() + geom_smooth(method = "lm") + theme(axis.title = element_blank())
+plotAB_Treecover_spring <- ggplot(data = Bestuivers_master_spring, aes(x = best_AB, y = Treecover, fill = Treetype, colour = Treetype)) + geom_point() + geom_smooth(method = "lm") + theme(axis.title = element_blank())
+plotAB_Treecover_summer <- ggplot(data = Bestuivers_master_summer, aes(x = best_AB, y = Treecover, fill = Treetype, colour = Treetype)) + geom_point() + geom_smooth(method = "lm") + theme(axis.title = element_blank())
+ggarrange(plotAB_Treecover, plotAB_Treecover_spring, plotAB_Treecover_summer, labels = c("overall", "spring", "summer"), nrow = 1, common.legend = TRUE, legend = "bottom")%>% 
+  annotate_figure(., top = text_grob("Total pollinator abundance vs tree cover"))
+
+## BEES
+plotAB_Treecover_b <- ggplot(data = Bestuivers_master, aes(x = b_AB, y = Treecover, fill = Treetype, colour = Treetype)) + geom_point() + geom_smooth(method = "lm") + theme(axis.title = element_blank())
+plotAB_Treecover_spring_b <- ggplot(data = Bestuivers_master_spring, aes(x = b_AB, y = Treecover, fill = Treetype, colour = Treetype)) + geom_point() + geom_smooth(method = "lm") + theme(axis.title = element_blank())
+plotAB_Treecover_summer_b <- ggplot(data = Bestuivers_master_summer, aes(x = b_AB, y = Treecover, fill = Treetype, colour = Treetype)) + geom_point() + geom_smooth(method = "lm") + theme(axis.title = element_blank())
+ggarrange(plotAB_Treecover_b, plotAB_Treecover_spring_b, plotAB_Treecover_summer_b, labels = c("overall", "spring", "summer"), nrow = 1, common.legend = TRUE, legend = "bottom")%>% 
+  annotate_figure(., top = text_grob("Bee abundance vs tree cover"))
+
+## SYRPHIDS
+plotAB_Treecover_s <- ggplot(data = Bestuivers_master, aes(x = s_AB, y = Treecover, fill = Treetype, colour = Treetype)) + geom_point() + geom_smooth(method = "lm") + theme(axis.title = element_blank())
+plotAB_Treecover_spring_s <- ggplot(data = Bestuivers_master_spring, aes(x = s_AB, y = Treecover, fill = Treetype, colour = Treetype)) + geom_point() + geom_smooth(method = "lm") + theme(axis.title = element_blank())
+plotAB_Treecover_summer_s <- ggplot(data = Bestuivers_master_summer, aes(x = s_AB, y = Treecover, fill = Treetype, colour = Treetype)) + geom_point() + geom_smooth(method = "lm") + theme(axis.title = element_blank())
+ggarrange(plotAB_Treecover_s, plotAB_Treecover_spring_s, plotAB_Treecover_summer_s, labels = c("overall", "spring", "summer"), nrow = 1, common.legend = TRUE, legend = "bottom")%>% 
+  annotate_figure(., top = text_grob("Syrphid abundance vs tree cover"))
+
+# RICHNESS vs Treecover
+
+## BESTUIVERS
+plotSR_Treecover <- ggplot(data = Bestuivers_master, aes(x = best_SR, y = Treecover, fill = Treetype, colour = Treetype)) + geom_point() + geom_smooth(method = "lm") + theme(axis.title = element_blank())
+plotSR_Treecover_spring <- ggplot(data = Bestuivers_master_spring, aes(x = best_SR, y = Treecover, fill = Treetype, colour = Treetype)) + geom_point() + geom_smooth(method = "lm") + theme(axis.title = element_blank())
+plotSR_Treecover_summer <- ggplot(data = Bestuivers_master_summer, aes(x = best_SR, y = Treecover, fill = Treetype, colour = Treetype)) + geom_point() + geom_smooth(method = "lm") + theme(axis.title = element_blank())
+ggarrange(plotSR_Treecover, plotSR_Treecover_spring, plotSR_Treecover_summer, labels = c("overall", "spring", "summer"), nrow = 1, common.legend = TRUE, legend = "bottom")%>% 
+  annotate_figure(., top = text_grob("Total pollinator richness vs tree cover"))
+
+## BEES
+plotSR_Treecover_b <- ggplot(data = Bestuivers_master, aes(x = b_SR, y = Treecover, fill = Treetype, colour = Treetype)) + geom_point() + geom_smooth(method = "lm") + theme(axis.title = element_blank())
+plotSR_Treecover_spring_b <- ggplot(data = Bestuivers_master_spring, aes(x = b_SR, y = Treecover, fill = Treetype, colour = Treetype)) + geom_point() + geom_smooth(method = "lm") + theme(axis.title = element_blank())
+plotSR_Treecover_summer_b <- ggplot(data = Bestuivers_master_summer, aes(x = b_SR, y = Treecover, fill = Treetype, colour = Treetype)) + geom_point() + geom_smooth(method = "lm") + theme(axis.title = element_blank())
+ggarrange(plotSR_Treecover_b, plotSR_Treecover_spring_b, plotSR_Treecover_summer_b, labels = c("overall", "spring", "summer"), nrow = 1, common.legend = TRUE, legend = "bottom")%>% 
+  annotate_figure(., top = text_grob("Bee richness vs tree cover"))
+
+## SYRPHIDS
+plotSR_Treecover_s <- ggplot(data = Bestuivers_master, aes(x = s_SR, y = Treecover, fill = Treetype, colour = Treetype)) + geom_point() + geom_smooth(method = "lm") + theme(axis.title = element_blank())
+plotSR_Treecover_spring_s <- ggplot(data = Bestuivers_master_spring, aes(x = s_SR, y = Treecover, fill = Treetype, colour = Treetype)) + geom_point() + geom_smooth(method = "lm") + theme(axis.title = element_blank())
+plotSR_Treecover_summer_s <- ggplot(data = Bestuivers_master_summer, aes(x = s_SR, y = Treecover, fill = Treetype, colour = Treetype)) + geom_point() + geom_smooth(method = "lm") + theme(axis.title = element_blank())
+ggarrange(plotSR_Treecover_s, plotSR_Treecover_spring_s, plotSR_Treecover_summer_s, labels = c("overall", "spring", "summer"), nrow = 1, common.legend = TRUE, legend = "bottom")%>% 
+  annotate_figure(., top = text_grob("Syrphid richness vs tree cover"))
+
+# ABUNDANCE vs Shrubcover
+
+## BESTUIVERS
+plotAB_Shrubcover <- ggplot(data = Bestuivers_master, aes(x = best_AB, y = Shrubcover, fill = Treetype, colour = Treetype)) + geom_point() + geom_smooth(method = "lm") + theme(axis.title = element_blank())
+plotAB_Shrubcover_spring <- ggplot(data = Bestuivers_master_spring, aes(x = best_AB, y = Shrubcover, fill = Treetype, colour = Treetype)) + geom_point() + geom_smooth(method = "lm") + theme(axis.title = element_blank())
+plotAB_Shrubcover_summer <- ggplot(data = Bestuivers_master_summer, aes(x = best_AB, y = Shrubcover, fill = Treetype, colour = Treetype)) + geom_point() + geom_smooth(method = "lm") + theme(axis.title = element_blank())
+ggarrange(plotAB_Shrubcover, plotAB_Shrubcover_spring, plotAB_Shrubcover_summer, labels = c("overall", "spring", "summer"), nrow = 1, common.legend = TRUE, legend = "bottom")%>% 
+  annotate_figure(., top = text_grob("Total pollinator abundance vs shrub cover"))
+
+## BEES
+plotAB_Shrubcover_b <- ggplot(data = Bestuivers_master, aes(x = b_AB, y = Shrubcover, fill = Treetype, colour = Treetype)) + geom_point() + geom_smooth(method = "lm") + theme(axis.title = element_blank())
+plotAB_Shrubcover_spring_b <- ggplot(data = Bestuivers_master_spring, aes(x = b_AB, y = Shrubcover, fill = Treetype, colour = Treetype)) + geom_point() + geom_smooth(method = "lm") + theme(axis.title = element_blank())
+plotAB_Shrubcover_summer_b <- ggplot(data = Bestuivers_master_summer, aes(x = b_AB, y = Shrubcover, fill = Treetype, colour = Treetype)) + geom_point() + geom_smooth(method = "lm") + theme(axis.title = element_blank())
+ggarrange(plotAB_Shrubcover_b, plotAB_Shrubcover_spring_b, plotAB_Shrubcover_summer_b, labels = c("overall", "spring", "summer"), nrow = 1, common.legend = TRUE, legend = "bottom")%>% 
+  annotate_figure(., top = text_grob("Bee abundance vs shrub cover"))
+
+## SYRPHIDS
+plotAB_Shrubcover_s <- ggplot(data = Bestuivers_master, aes(x = s_AB, y = Shrubcover, fill = Treetype, colour = Treetype)) + geom_point() + geom_smooth(method = "lm") + theme(axis.title = element_blank())
+plotAB_Shrubcover_spring_s <- ggplot(data = Bestuivers_master_spring, aes(x = s_AB, y = Shrubcover, fill = Treetype, colour = Treetype)) + geom_point() + geom_smooth(method = "lm") + theme(axis.title = element_blank())
+plotAB_Shrubcover_summer_s <- ggplot(data = Bestuivers_master_summer, aes(x = s_AB, y = Shrubcover, fill = Treetype, colour = Treetype)) + geom_point() + geom_smooth(method = "lm") + theme(axis.title = element_blank())
+ggarrange(plotAB_Shrubcover_s, plotAB_Shrubcover_spring_s, plotAB_Shrubcover_summer_s, labels = c("overall", "spring", "summer"), nrow = 1, common.legend = TRUE, legend = "bottom")%>% 
+  annotate_figure(., top = text_grob("Syrphid abundance vs shrub cover"))
+
+# RICHNESS vs Shrubcover
+
+## BESTUIVERS
+plotSR_Shrubcover <- ggplot(data = Bestuivers_master, aes(x = best_SR, y = Shrubcover, fill = Treetype, colour = Treetype)) + geom_point() + geom_smooth(method = "lm") + theme(axis.title = element_blank())
+plotSR_Shrubcover_spring <- ggplot(data = Bestuivers_master_spring, aes(x = best_SR, y = Shrubcover, fill = Treetype, colour = Treetype)) + geom_point() + geom_smooth(method = "lm") + theme(axis.title = element_blank())
+plotSR_Shrubcover_summer <- ggplot(data = Bestuivers_master_summer, aes(x = best_SR, y = Shrubcover, fill = Treetype, colour = Treetype)) + geom_point() + geom_smooth(method = "lm") + theme(axis.title = element_blank())
+ggarrange(plotSR_Shrubcover, plotSR_Shrubcover_spring, plotSR_Shrubcover_summer, labels = c("overall", "spring", "summer"), nrow = 1, common.legend = TRUE, legend = "bottom")%>% 
+  annotate_figure(., top = text_grob("Total pollinator richness vs shrub cover"))
+
+## BEES
+plotSR_Shrubcover_b <- ggplot(data = Bestuivers_master, aes(x = b_SR, y = Shrubcover, fill = Treetype, colour = Treetype)) + geom_point() + geom_smooth(method = "lm") + theme(axis.title = element_blank())
+plotSR_Shrubcover_spring_b <- ggplot(data = Bestuivers_master_spring, aes(x = b_SR, y = Shrubcover, fill = Treetype, colour = Treetype)) + geom_point() + geom_smooth(method = "lm") + theme(axis.title = element_blank())
+plotSR_Shrubcover_summer_b <- ggplot(data = Bestuivers_master_summer, aes(x = b_SR, y = Shrubcover, fill = Treetype, colour = Treetype)) + geom_point() + geom_smooth(method = "lm") + theme(axis.title = element_blank())
+ggarrange(plotSR_Shrubcover_b, plotSR_Shrubcover_spring_b, plotSR_Shrubcover_summer_b, labels = c("overall", "spring", "summer"), nrow = 1, common.legend = TRUE, legend = "bottom")%>% 
+  annotate_figure(., top = text_grob("Bee richness vs shrub cover"))
+
+## SYRPHIDS
+plotSR_Shrubcover_s <- ggplot(data = Bestuivers_master, aes(x = s_SR, y = Shrubcover, fill = Treetype, colour = Treetype)) + geom_point() + geom_smooth(method = "lm") + theme(axis.title = element_blank())
+plotSR_Shrubcover_spring_s <- ggplot(data = Bestuivers_master_spring, aes(x = s_SR, y = Shrubcover, fill = Treetype, colour = Treetype)) + geom_point() + geom_smooth(method = "lm") + theme(axis.title = element_blank())
+plotSR_Shrubcover_summer_s <- ggplot(data = Bestuivers_master_summer, aes(x = s_SR, y = Shrubcover, fill = Treetype, colour = Treetype)) + geom_point() + geom_smooth(method = "lm") + theme(axis.title = element_blank())
+ggarrange(plotSR_Shrubcover_s, plotSR_Shrubcover_spring_s, plotSR_Shrubcover_summer_s, labels = c("overall", "spring", "summer"), nrow = 1, common.legend = TRUE, legend = "bottom")%>% 
+  annotate_figure(., top = text_grob("Syrphid richness vs shrub cover"))
+
+# ABUNDANCE vs ImageCover
+
+## BESTUIVERS
+plotAB_ImageCover <- ggplot(data = Bestuivers_master, aes(x = best_AB, y = ImageCover, fill = Treetype, colour = Treetype)) + geom_point() + geom_smooth(method = "lm") + theme(axis.title = element_blank())
+plotAB_ImageCover_spring <- ggplot(data = Bestuivers_master_spring, aes(x = best_AB, y = ImageCover, fill = Treetype, colour = Treetype)) + geom_point() + geom_smooth(method = "lm") + theme(axis.title = element_blank())
+plotAB_ImageCover_summer <- ggplot(data = Bestuivers_master_summer, aes(x = best_AB, y = ImageCover, fill = Treetype, colour = Treetype)) + geom_point() + geom_smooth(method = "lm") + theme(axis.title = element_blank())
+ggarrange(plotAB_ImageCover, plotAB_ImageCover_spring, plotAB_ImageCover_summer, labels = c("overall", "spring", "summer"), nrow = 1, common.legend = TRUE, legend = "bottom")%>% 
+  annotate_figure(., top = text_grob("Total pollinator abundance vs image cover"))
+
+## BEES
+plotAB_ImageCover_b <- ggplot(data = Bestuivers_master, aes(x = b_AB, y = ImageCover, fill = Treetype, colour = Treetype)) + geom_point() + geom_smooth(method = "lm") + theme(axis.title = element_blank())
+plotAB_ImageCover_spring_b <- ggplot(data = Bestuivers_master_spring, aes(x = b_AB, y = ImageCover, fill = Treetype, colour = Treetype)) + geom_point() + geom_smooth(method = "lm") + theme(axis.title = element_blank())
+plotAB_ImageCover_summer_b <- ggplot(data = Bestuivers_master_summer, aes(x = b_AB, y = ImageCover, fill = Treetype, colour = Treetype)) + geom_point() + geom_smooth(method = "lm") + theme(axis.title = element_blank())
+ggarrange(plotAB_ImageCover_b, plotAB_ImageCover_spring_b, plotAB_ImageCover_summer_b, labels = c("overall", "spring", "summer"), nrow = 1, common.legend = TRUE, legend = "bottom")%>% 
+  annotate_figure(., top = text_grob("Bee abundance vs image cover"))
+
+## SYRPHIDS
+plotAB_ImageCover_s <- ggplot(data = Bestuivers_master, aes(x = s_AB, y = ImageCover, fill = Treetype, colour = Treetype)) + geom_point() + geom_smooth(method = "lm") + theme(axis.title = element_blank())
+plotAB_ImageCover_spring_s <- ggplot(data = Bestuivers_master_spring, aes(x = s_AB, y = ImageCover, fill = Treetype, colour = Treetype)) + geom_point() + geom_smooth(method = "lm") + theme(axis.title = element_blank())
+plotAB_ImageCover_summer_s <- ggplot(data = Bestuivers_master_summer, aes(x = s_AB, y = ImageCover, fill = Treetype, colour = Treetype)) + geom_point() + geom_smooth(method = "lm") + theme(axis.title = element_blank())
+ggarrange(plotAB_ImageCover_s, plotAB_ImageCover_spring_s, plotAB_ImageCover_summer_s, labels = c("overall", "spring", "summer"), nrow = 1, common.legend = TRUE, legend = "bottom")%>% 
+  annotate_figure(., top = text_grob("Syrphid abundance vs image cover"))
+
+# RICHNESS vs ImageCover
+
+## BESTUIVERS
+plotSR_ImageCover <- ggplot(data = Bestuivers_master, aes(x = best_SR, y = ImageCover, fill = Treetype, colour = Treetype)) + geom_point() + geom_smooth(method = "lm") + theme(axis.title = element_blank())
+plotSR_ImageCover_spring <- ggplot(data = Bestuivers_master_spring, aes(x = best_SR, y = ImageCover, fill = Treetype, colour = Treetype)) + geom_point() + geom_smooth(method = "lm") + theme(axis.title = element_blank())
+plotSR_ImageCover_summer <- ggplot(data = Bestuivers_master_summer, aes(x = best_SR, y = ImageCover, fill = Treetype, colour = Treetype)) + geom_point() + geom_smooth(method = "lm") + theme(axis.title = element_blank())
+ggarrange(plotSR_ImageCover, plotSR_ImageCover_spring, plotSR_ImageCover_summer, labels = c("overall", "spring", "summer"), nrow = 1, common.legend = TRUE, legend = "bottom")%>% 
+  annotate_figure(., top = text_grob("Total pollinator richness vs image cover"))
+
+## BEES
+plotSR_ImageCover_b <- ggplot(data = Bestuivers_master, aes(x = b_SR, y = ImageCover, fill = Treetype, colour = Treetype)) + geom_point() + geom_smooth(method = "lm") + theme(axis.title = element_blank())
+plotSR_ImageCover_spring_b <- ggplot(data = Bestuivers_master_spring, aes(x = b_SR, y = ImageCover, fill = Treetype, colour = Treetype)) + geom_point() + geom_smooth(method = "lm") + theme(axis.title = element_blank())
+plotSR_ImageCover_summer_b <- ggplot(data = Bestuivers_master_summer, aes(x = b_SR, y = ImageCover, fill = Treetype, colour = Treetype)) + geom_point() + geom_smooth(method = "lm") + theme(axis.title = element_blank())
+ggarrange(plotSR_ImageCover_b, plotSR_ImageCover_spring_b, plotSR_ImageCover_summer_b, labels = c("overall", "spring", "summer"), nrow = 1, common.legend = TRUE, legend = "bottom")%>% 
+  annotate_figure(., top = text_grob("Bee richness vs image cover"))
+
+## SYRPHIDS
+plotSR_ImageCover_s <- ggplot(data = Bestuivers_master, aes(x = s_SR, y = ImageCover, fill = Treetype, colour = Treetype)) + geom_point() + geom_smooth(method = "lm") + theme(axis.title = element_blank())
+plotSR_ImageCover_spring_s <- ggplot(data = Bestuivers_master_spring, aes(x = s_SR, y = ImageCover, fill = Treetype, colour = Treetype)) + geom_point() + geom_smooth(method = "lm") + theme(axis.title = element_blank())
+plotSR_ImageCover_summer_s <- ggplot(data = Bestuivers_master_summer, aes(x = s_SR, y = ImageCover, fill = Treetype, colour = Treetype)) + geom_point() + geom_smooth(method = "lm") + theme(axis.title = element_blank())
+ggarrange(plotSR_ImageCover_s, plotSR_ImageCover_spring_s, plotSR_ImageCover_summer_s, labels = c("overall", "spring", "summer"), nrow = 1, common.legend = TRUE, legend = "bottom")%>% 
+  annotate_figure(., top = text_grob("Syrphid richness vs image cover"))
+
+```
+
+
+```{r NMDS, echo=FALSE, warning=FALSE, message=FALSE, results='hide'}
 library(ape)
 library(vegan)
 
@@ -169,7 +951,7 @@ species_bees_nmds <- b_wide_complete %>%
    group_by(Location, Treetype) %>%
    summarise(across(everything(), sum)) %>%
    ungroup() %>%
-   select(where(~ any(. != 0))) %>%
+   dplyr::select(where(~ any(. != 0))) %>%
    as.data.frame()
 
 species_bees_nmds <- species_bees_nmds[rowSums(species_bees_nmds[, -c(0:2)])!= 0, ]
@@ -211,24 +993,48 @@ bees_nmds_results <- metaMDS(comm = species_bees_nmds_clean_noempty,
 ###Syrphids
 
 species_syrphids_nmds <- s_wide_complete %>%
-   subset(select = -c(Session, Trap, Syrphidae_spec., Eupeodes_spec., Melanostoma_spec.)) %>%
-   group_by(Location, Treetype) %>%
+   subset(select = -c(Trap, Syrphidae_spec., Eupeodes_spec., Melanostoma_spec., Chrysotoxum_bicinctum)) %>%
+   group_by(Location, Treetype, Session) %>%
    summarise(across(everything(), sum)) %>%
    ungroup() %>%
-   select(where(~ any(. != 0))) %>%
+   dplyr::select(where(~ any(. != 0))) %>%
    as.data.frame()
 
-species_syrphids_nmds <- species_syrphids_nmds[rowSums(species_syrphids_nmds[, -c(0:2)])!= 0, ]
+species_syrphids_nmds_spring <- filter(species_syrphids_nmds, Session < 5)
+species_syrphids_nmds_summer <- filter(species_syrphids_nmds, Session > 4)
+
+species_syrphids_nmds <- species_syrphids_nmds[rowSums(species_syrphids_nmds[, -c(0:3)])!= 0, ]
 syrphids_LU <- species_syrphids_nmds[, 2]
 
-rownames(species_syrphids_nmds) <- paste(species_syrphids_nmds$Location, species_syrphids_nmds$Treetype)
+species_syrphids_nmds_spring <- species_syrphids_nmds_spring[rowSums(species_syrphids_nmds_spring[, -c(0:3)])!= 0, ]
+syrphids_LU_spring <- species_syrphids_nmds_spring[, 2]
 
-species_syrphids_nmds_clean <- species_syrphids_nmds[, -c(0:2)] 
+species_syrphids_nmds_summer <- species_syrphids_nmds_summer[rowSums(species_syrphids_nmds_summer[, -c(0:3)])!= 0, ]
+syrphids_LU_summer <- species_syrphids_nmds_summer[, 2]
+
+rownames(species_syrphids_nmds) <- paste(species_syrphids_nmds$Location, species_syrphids_nmds$Treetype, species_syrphids_nmds$Session)
+
+rownames(species_syrphids_nmds_spring) <- paste(species_syrphids_nmds_spring$Location, species_syrphids_nmds_spring$Treetype, species_syrphids_nmds_spring$Session)
+
+rownames(species_syrphids_nmds_summer) <- paste(species_syrphids_nmds_summer$Location, species_syrphids_nmds_summer$Treetype, species_syrphids_nmds_summer$Session)
+
+species_syrphids_nmds_clean <- species_syrphids_nmds[, -c(0:3)] 
 species_syrphids_nmds_clean <- as.matrix(species_syrphids_nmds_clean)
 
-species_syrphids_nmds_noempty <- species_syrphids_nmds[rowSums(species_syrphids_nmds_clean)!=0,] 
+species_syrphids_nmds_clean_spring <- species_syrphids_nmds_spring[, -c(0:3)] 
+species_syrphids_nmds_clean_spring <- as.matrix(species_syrphids_nmds_clean_spring)
 
+species_syrphids_nmds_clean_summer <- species_syrphids_nmds_summer[, -c(0:3)] 
+species_syrphids_nmds_clean_summer <- as.matrix(species_syrphids_nmds_clean_summer)
+
+species_syrphids_nmds_noempty <- species_syrphids_nmds[rowSums(species_syrphids_nmds_clean)!=0,]
 species_syrphids_nmds_clean_noempty <- species_syrphids_nmds_clean[rowSums(species_syrphids_nmds_clean)!=0,]
+
+species_syrphids_nmds_noempty_spring <- species_syrphids_nmds_spring[rowSums(species_syrphids_nmds_clean_spring)!=0,]
+species_syrphids_nmds_clean_noempty_spring <- species_syrphids_nmds_clean_spring[rowSums(species_syrphids_nmds_clean_spring)!=0,]
+
+species_syrphids_nmds_noempty_summer <- species_syrphids_nmds_summer[rowSums(species_syrphids_nmds_clean_summer)!=0,]
+species_syrphids_nmds_clean_noempty_summer <- species_syrphids_nmds_clean_summer[rowSums(species_syrphids_nmds_clean_summer)!=0,]
 
 syrphids_nmds_results <- metaMDS(comm = species_syrphids_nmds_clean_noempty,
                         autotransform = FALSE,
@@ -237,9 +1043,26 @@ syrphids_nmds_results <- metaMDS(comm = species_syrphids_nmds_clean_noempty,
                         maxit = 300,
                         try = 100,
                         trymax = 100)
+
+syrphids_nmds_results_spring <-metaMDS(comm = species_syrphids_nmds_clean_noempty_spring,
+                        autotransform = FALSE,
+                        distance = "bray",
+                        k = 2,
+                        maxit = 300,
+                        try = 100,
+                        trymax = 100)
+
+syrphids_nmds_results_summer <-metaMDS(comm = species_syrphids_nmds_clean_noempty_summer,
+                        autotransform = FALSE,
+                        distance = "bray",
+                        k = 2,
+                        maxit = 300,
+                        try = 100,
+                        trymax = 100)
 ```
 
-```{r plotNMDS, echo=FALSE, warning=FALSE}
+## Multivariate analysis: NMDS
+```{r plotNMDS, echo=FALSE, warning=FALSE, message=FALSE}
 
 # First create a data frame of the scores from the individual sites.
 # This data frame will contain x and y values for where sites are located.
@@ -293,25 +1116,6 @@ ggplot() +
 bees_MDS_xy <- data.frame(bees_nmds_results$points)
 bees_MDS_xy$Treetype <- factor(bees_LU, 
                          levels = c("B", "O", "P"))
-# indicator species
-library(indicspecies)
-bees_data <- species_bees_nmds %>%
- subset(select = -c(Location, Treetype))
- Treetype <- species_bees_nmds$Treetype
- bees_inv = multipatt(bees_data, 
-                 Treetype, 
-                 func = "r.g", control = how(nperm=999))
- summary(bees_inv, alpha = 0.05)
-# alpha geeft significantieniveau vanaf wanneer hij soorten als specifiek voor boomtype beschouwt
-#ind_species_scores <- species_scores %>%
-#   rownames_to_column("Species") %>%
-#   subset(subset = Species %in% c("Andrena_clarkella",
-#                                  "Osmia_bicornis", "Andrena_haemorrhoa",
-#                                  "Andrena_vaga", "Andrena_fulva",
-#                                  "Anthophora_plumipes"))
-# rownames(ind_species_scores) <- ind_species_scores$Species
-# ind_species_scores <- ind_species_scores %>%
-#   select(-Species)
 
 ggplot() +
   stat_ellipse(data = bees_MDS_xy, geom = "polygon", aes(MDS1, MDS2, 
@@ -337,20 +1141,64 @@ ggplot() +
         axis.line = element_line(colour = "darkgrey"))+
   ggtitle("NMDS bees ellips") 
 
+# indicator species bees
+library(indicspecies)
+bees_data <- species_bees_nmds %>%
+ subset(select = -c(Location, Treetype))
+ Treetype <- species_bees_nmds$Treetype
+ bees_inv = multipatt(bees_data, 
+                 Treetype, 
+                 func = "r.g", control = how(nperm=999))
+ summary(bees_inv, alpha = 0.05)
+ # alpha geeft significantieniveau vanaf wanneer hij soorten als specifiek voor boomtype beschouwt
+ 
+ #ind_species_scores <- species_scores %>%
+#   rownames_to_column("Species") %>%
+#   subset(subset = Species %in% c("Andrena_clarkella",
+#                                  "Osmia_bicornis", "Andrena_haemorrhoa",
+#                                  "Andrena_vaga", "Andrena_fulva",
+#                                  "Anthophora_plumipes"))
+# rownames(ind_species_scores) <- ind_species_scores$Species
+# ind_species_scores <- ind_species_scores %>%
+#   select(-Species)
+
 ###Syrphids
 
 syrphids_data_scores <- as.data.frame(scores(syrphids_nmds_results)$sites)
+
+syrphids_data_scores_spring <- as.data.frame(scores(syrphids_nmds_results_spring)$sites)
+
+syrphids_data_scores_summer <- as.data.frame(scores(syrphids_nmds_results_summer)$sites)
 
 # Now add an extra column indicating which land use the community is coming from
 syrphids_data_scores <- cbind(syrphids_data_scores, species_syrphids_nmds_noempty[,2])
 colnames(syrphids_data_scores)[3] <- "Treetype"
 syrphids_data_scores$Treetype <- factor(syrphids_data_scores$Treetype,
                               levels = c("B", "O", "P"))
+
+syrphids_data_scores_spring <- cbind(syrphids_data_scores_spring, species_syrphids_nmds_noempty_spring[,2])
+colnames(syrphids_data_scores_spring)[3] <- "Treetype"
+syrphids_data_scores_spring$Treetype <- factor(syrphids_data_scores_spring$Treetype,
+                              levels = c("B", "O", "P"))
+
+syrphids_data_scores_summer <- cbind(syrphids_data_scores_summer, species_syrphids_nmds_noempty_summer[,2])
+colnames(syrphids_data_scores_summer)[3] <- "Treetype"
+syrphids_data_scores_summer$Treetype <- factor(syrphids_data_scores_summer$Treetype,
+                              levels = c("B", "O", "P"))
+
 # Next, we can add the scores for species data
 syrphids_species_scores <- as.data.frame(scores(syrphids_nmds_results, "species"))
 
+syrphids_species_scores_spring <- as.data.frame(scores(syrphids_nmds_results_spring, "species"))
+
+syrphids_species_scores_summer <- as.data.frame(scores(syrphids_nmds_results_summer, "species"))
+
 # Add a column equivalent to the row name to create species labels
 syrphids_species_scores$Species <- rownames(syrphids_species_scores)
+
+syrphids_species_scores_spring$Species <- rownames(syrphids_species_scores_spring)
+
+syrphids_species_scores_summer$Species <- rownames(syrphids_species_scores_summer)
 
 # Now for the polygons/hulls:
 syrphids_Beech <- syrphids_data_scores[syrphids_data_scores$Treetype == "B", ][chull(syrphids_data_scores[syrphids_data_scores$Treetype == 
@@ -363,6 +1211,45 @@ syrphids_Poplar <- syrphids_data_scores[syrphids_data_scores$Treetype == "P", ][
     "P", c("NMDS1", "NMDS2")]), ]  # hull values for forests
 
 syrphids_hull_data <- rbind(syrphids_Beech, syrphids_Oak, syrphids_Poplar)  
+
+#---------------------------------
+
+syrphids_Beech_spring <- syrphids_data_scores_spring[syrphids_data_scores_spring$Treetype == "B", ][chull(syrphids_data_scores_spring[syrphids_data_scores_spring$Treetype == 
+    "B", c("NMDS1", "NMDS2")]), ]  # hull values for forests
+
+syrphids_Oak_spring <- syrphids_data_scores_spring[syrphids_data_scores_spring$Treetype == "O", ][chull(syrphids_data_scores_spring[syrphids_data_scores_spring$Treetype == 
+    "O", c("NMDS1", "NMDS2")]), ]  # hull values for forests
+
+syrphids_Poplar_spring <- syrphids_data_scores_spring[syrphids_data_scores_spring$Treetype == "P", ][chull(syrphids_data_scores_spring[syrphids_data_scores_spring$Treetype == 
+    "P", c("NMDS1", "NMDS2")]), ]  # hull values for forests
+
+syrphids_hull_data_spring <- rbind(syrphids_Beech_spring, syrphids_Oak_spring, syrphids_Poplar_spring)  
+
+#---------------------------------
+
+syrphids_Beech_summer <- syrphids_data_scores_summer[syrphids_data_scores_summer$Treetype == "B", ][chull(syrphids_data_scores_summer[syrphids_data_scores_summer$Treetype == 
+    "B", c("NMDS1", "NMDS2")]), ]  # hull values for forests
+
+syrphids_Oak_summer <- syrphids_data_scores_summer[syrphids_data_scores_summer$Treetype == "O", ][chull(syrphids_data_scores_summer[syrphids_data_scores_summer$Treetype == 
+    "O", c("NMDS1", "NMDS2")]), ]  # hull values for forests
+
+syrphids_Poplar_summer <- syrphids_data_scores_summer[syrphids_data_scores_summer$Treetype == "P", ][chull(syrphids_data_scores_summer[syrphids_data_scores_summer$Treetype == 
+    "P", c("NMDS1", "NMDS2")]), ]  # hull values for forests
+
+syrphids_hull_data_summer <- rbind(syrphids_Beech_summer, syrphids_Oak_summer, syrphids_Poplar_summer)  
+
+syrphids_MDS_xy <- data.frame(syrphids_nmds_results$points)
+syrphids_MDS_xy$Treetype <- factor(syrphids_LU, 
+                         levels = c("B", "O", "P"))
+
+syrphids_MDS_xy_spring <- data.frame(syrphids_nmds_results_spring$points)
+syrphids_MDS_xy_spring$Treetype <- factor(syrphids_LU_spring, 
+                         levels = c("B", "O", "P"))
+
+syrphids_MDS_xy_summer <- data.frame(syrphids_nmds_results_summer$points)
+syrphids_MDS_xy_summer$Treetype <- factor(syrphids_LU_summer, 
+                         levels = c("B", "O", "P"))
+
 
 # Now we can build the plot!
 
@@ -384,21 +1271,11 @@ ggplot() +
   theme_minimal() +
   theme(legend.position = "right",
         text = element_text(size = 12))+
-  ggtitle("NMDS syrphids polygon")
+  ggtitle("NMDS syrphids polygon all season")
 
-syrphids_MDS_xy <- data.frame(syrphids_nmds_results$points)
-syrphids_MDS_xy$Treetype <- factor(syrphids_LU, 
-                         levels = c("B", "O", "P"))
-# indicator species
-syrphids_data <- species_syrphids_nmds %>%
- subset(select = -c(Location, Treetype))
- Treetype <- species_syrphids_nmds$Treetype
- syrphids_inv = multipatt(syrphids_data, 
-                 Treetype, 
-                 func = "r.g", control = how(nperm=999))
- summary(syrphids_inv, alpha = 0.05)
+#----------------------------------------
 
- ggplot() +
+ggplot() +
   stat_ellipse(data = syrphids_MDS_xy, geom = "polygon", aes(MDS1, MDS2, 
                                                     color = Treetype, 
                                                     fill = Treetype), alpha = 0.3) +
@@ -420,5 +1297,78 @@ syrphids_data <- species_syrphids_nmds %>%
         panel.grid.major = element_blank(),
         panel.grid.minor = element_blank(), 
         axis.line = element_line(colour = "darkgrey"))+
-  ggtitle("NMDS syrphids ellips") 
+  ggtitle("NMDS syrphids ellips all season") 
+
+ggplot() +
+  stat_ellipse(data = syrphids_MDS_xy_spring, geom = "polygon", aes(MDS1, MDS2, 
+                                                    color = Treetype, 
+                                                    fill = Treetype), alpha = 0.3) +
+  geom_point(data = syrphids_data_scores_spring, aes(x = NMDS1, y = NMDS2, 
+                                     shape = Treetype, color = Treetype),
+             size = 2) +
+  scale_fill_manual(values = c("#D55E00", "#F0E442", "#009E73"),
+                    name = "Treetype") +
+  scale_color_manual(values = c("#D55E00", "#F0E442", "#009E73"),
+                     name = "Treetype") +
+  scale_shape_manual(values = c(15, 16, 17)) +
+  annotate(geom = "label", x = -1, y = 2, size = 4,
+           label = paste("Stress: ", round(syrphids_nmds_results_spring$stress, digits = 3))) +
+  geom_text(data = syrphids_species_scores_spring, aes(x = NMDS1, y = NMDS2, label = Species),
+            alpha = 0.5, size = 1.5) +
+  theme_minimal() +
+  theme(text = element_text(size = 12),
+        panel.border = element_blank(), 
+        panel.grid.major = element_blank(),
+        panel.grid.minor = element_blank(), 
+        axis.line = element_line(colour = "darkgrey"))+
+  ggtitle("NMDS syrphids ellips spring") 
+
+ggplot() +
+  stat_ellipse(data = syrphids_MDS_xy_summer, geom = "polygon", aes(MDS1, MDS2, 
+                                                    color = Treetype, 
+                                                    fill = Treetype), alpha = 0.3) +
+  geom_point(data = syrphids_data_scores_summer, aes(x = NMDS1, y = NMDS2, 
+                                     shape = Treetype, color = Treetype),
+             size = 2) +
+  scale_fill_manual(values = c("#D55E00", "#F0E442", "#009E73"),
+                    name = "Treetype") +
+  scale_color_manual(values = c("#D55E00", "#F0E442", "#009E73"),
+                     name = "Treetype") +
+  scale_shape_manual(values = c(15, 16, 17)) +
+  annotate(geom = "label", x = -1, y = 2, size = 4,
+           label = paste("Stress: ", round(syrphids_nmds_results_summer$stress, digits = 3))) +
+  geom_text(data = syrphids_species_scores_summer, aes(x = NMDS1, y = NMDS2, label = Species),
+            alpha = 0.5, size = 1.5) +
+  theme_minimal() +
+  theme(text = element_text(size = 12),
+        panel.border = element_blank(), 
+        panel.grid.major = element_blank(),
+        panel.grid.minor = element_blank(), 
+        axis.line = element_line(colour = "darkgrey"))+
+  ggtitle("NMDS syrphids ellips summer") 
+
+# indicator species syrphids
+syrphids_data <- species_syrphids_nmds %>%
+ subset(select = -c(Location, Treetype, Session))
+ Treetype <- species_syrphids_nmds$Treetype
+ syrphids_inv = multipatt(syrphids_data, 
+                 Treetype, 
+                 func = "r.g", control = how(nperm=999))
+ summary(syrphids_inv, alpha = 0.05)
+ 
+ syrphids_data_spring <- species_syrphids_nmds_spring %>%
+ subset(select = -c(Location, Treetype, Session))
+ Treetype <- species_syrphids_nmds_spring$Treetype
+ syrphids_inv_spring = multipatt(syrphids_data_spring, 
+                 Treetype, 
+                 func = "r.g", control = how(nperm=999))
+ summary(syrphids_inv_spring, alpha = 0.05)
+ 
+ syrphids_data_summer <- species_syrphids_nmds_summer %>%
+ subset(select = -c(Location, Treetype, Session))
+ Treetype <- species_syrphids_nmds_summer$Treetype
+ syrphids_inv_summer = multipatt(syrphids_data_summer, 
+                 Treetype, 
+                 func = "r.g", control = how(nperm=999))
+ summary(syrphids_inv_summer, alpha = 0.05)
 ```
