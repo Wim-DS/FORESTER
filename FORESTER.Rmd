@@ -23,6 +23,11 @@ library(ggpubr)
 library(corrplot)
 library(car)
 library(MASS)
+library(indicspecies)
+library(stringr)
+library(tibble) 
+library(ape)
+library(vegan)
 ```
 
 ```{r loading data, echo=FALSE}
@@ -122,16 +127,22 @@ b_tidy_complete <- b_wide_complete %>%
                names_to = "Species",
                values_to = "Count")
 
+
+
 # Calculate total abundance from this complete tidy df
 b_abundance <- aggregate(data = b_tidy_complete,
                   Count ~ Session + Location + Treetype,
                   FUN = sum)
+
+
+
 b_abundance <- as.data.frame(b_abundance) %>% 
   complete(Session, Location, Treetype) %>%
   mutate(across(everything(), replace_na, 0)) %>% 
   subset((Treetype == "B" & Location %in% c("B2", "B3", "B4", "B5", "B6", "B8", "B9")|
             Treetype == "O" & Location %in% c("O3", "O4", "O5", "O6", "O7")|
             Treetype == "P" & Location %in% c("P1", "P2", "P3", "P5", "P6", "P7", "P8")))
+
 
 b_abundance$Treetype <- factor(b_abundance$Treetype, 
                             levels = c("B", "O", "P"))
@@ -343,7 +354,7 @@ Bestuivers_master_spring <- Bestuivers_master %>% filter(Session < 5)
 Bestuivers_master_summer <- Bestuivers_master %>% filter(Session > 4)
 
 source("HighstatLibV10.R")
-variables <- Bestuivers_master[, c(4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20)]
+variables <- Bestuivers_master[, c(10,11,12,13,14,15,16,17,18,19,20)]
 corvariables<- cor(variables)
 testRes = cor.mtest(variables, conf.level = 0.95)
 corrplot1 <- corrplot(corvariables, method = "number", type = 'lower', order = 'AOE', number.cex = 0.4)
@@ -382,12 +393,123 @@ total_b_species_spring <- b_tidy_complete %>% filter (Count!=0 & Session < 5) %>
 
 total_b_species_summer <- b_tidy_complete %>% filter (Count!=0 & Session > 4) %>% group_by(Treetype) %>% summarise(total_b_species = n_distinct(Species))
 
+#Boxplots: characterising forests
+
+ggplot(data = Bestuivers_master, aes(x=as.factor(Treetype), y = SCI, fill = Treetype, colour = Treetype))+
+  geom_boxplot()+ ggtitle("SCI forests")
+
+ggplot(data = Bestuivers_master_spring, aes(x=as.factor(Treetype), y = herbal_layer, fill = Treetype, colour = Treetype))+
+  geom_boxplot()+ ggtitle("Herb layer forests")
+
+ggplot(data = Bestuivers_master_summer, aes(x=as.factor(Treetype), y = woody_layer, fill = Treetype, colour = Treetype))+
+  geom_boxplot()+ ggtitle("Woody layer forests")
+
+ggplot(data = Bestuivers_master_spring, aes(x=as.factor(Treetype), y = forest_structure, fill = Treetype, colour = Treetype))+
+  geom_boxplot()+ ggtitle("Structure forests")
+
+ggplot(data = Bestuivers_master_summer, aes(x=as.factor(Treetype), y = dead_wood, fill = Treetype, colour = Treetype))+
+  geom_boxplot()+ ggtitle("Dead wood forests")
+
+#----------------------------------------------------
+
+ggplot(data = Bestuivers_master, aes(x=as.factor(Treetype), y = flower_AB, fill = Treetype, colour = Treetype))+
+  geom_boxplot()+ ggtitle("Flower abundance all season")
+
+ggplot(data = Bestuivers_master, aes(x=as.factor(Treetype), y = flower_SR, fill = Treetype, colour = Treetype))+
+  geom_boxplot()+ ggtitle("Flower richness all season")
+
+ggplot(data = Bestuivers_master_spring, aes(x=as.factor(Treetype), y = flower_AB, fill = Treetype, colour = Treetype))+
+  geom_boxplot()+ ggtitle("Flower abundance spring")
+
+ggplot(data = Bestuivers_master_spring, aes(x=as.factor(Treetype), y = flower_SR, fill = Treetype, colour = Treetype))+
+  geom_boxplot()+ ggtitle("Flower richness spring")
+
+ggplot(data = Bestuivers_master_summer, aes(x=as.factor(Treetype), y = flower_AB, fill = Treetype, colour = Treetype))+
+  geom_boxplot()+ ggtitle("Flower abundance summer")
+
+ggplot(data = Bestuivers_master_summer, aes(x=as.factor(Treetype), y = flower_SR, fill = Treetype, colour = Treetype))+
+  geom_boxplot()+ ggtitle("Flower richness summer")
+
+#-------------------------------------------------------------
+
+ggplot(data = Bestuivers_master, aes(x=as.factor(Treetype), y = Treecover, fill = Treetype, colour = Treetype))+
+  geom_boxplot()+ ggtitle("Tree cover forests")
+
+ggplot(data = Bestuivers_master_spring, aes(x=as.factor(Treetype), y = Shrubcover, fill = Treetype, colour = Treetype))+
+  geom_boxplot()+ ggtitle("Shrub cover forests")
+
+ggplot(data = Bestuivers_master_summer, aes(x=as.factor(Treetype), y = Totalcover, fill = Treetype, colour = Treetype))+
+  geom_boxplot()+ ggtitle("Total cover forests")
+
+ggplot(data = Bestuivers_master_spring, aes(x=as.factor(Treetype), y = ImageCover, fill = Treetype, colour = Treetype))+
+  geom_boxplot()+ ggtitle("Image cover")
+
+#----------------------------------------------------
+
+ggplot(data = Bestuivers_master, aes(x=as.factor(Treetype), y = best_AB, fill = Treetype, colour = Treetype))+
+  geom_boxplot()+ ggtitle("Pollinator abundance all season")
+
+ggplot(data = Bestuivers_master, aes(x=as.factor(Treetype), y = best_SR, fill = Treetype, colour = Treetype))+
+  geom_boxplot()+ ggtitle("Pollinator richness all season")
+
+ggplot(data = Bestuivers_master_spring, aes(x=as.factor(Treetype), y = best_AB, fill = Treetype, colour = Treetype))+
+  geom_boxplot()+ ggtitle("Pollinator abundance spring")
+
+ggplot(data = Bestuivers_master_spring, aes(x=as.factor(Treetype), y = best_SR, fill = Treetype, colour = Treetype))+
+  geom_boxplot()+ ggtitle("Pollinator richness spring")
+
+ggplot(data = Bestuivers_master_summer, aes(x=as.factor(Treetype), y = best_AB, fill = Treetype, colour = Treetype))+
+  geom_boxplot()+ ggtitle("Pollinator abundance summer")
+
+ggplot(data = Bestuivers_master_summer, aes(x=as.factor(Treetype), y = best_SR, fill = Treetype, colour = Treetype))+
+  geom_boxplot()+ ggtitle("Pollinator richness summer")
+
+#-------------------------------------------------------------
+
+ggplot(data = Bestuivers_master, aes(x=as.factor(Treetype), y = b_AB, fill = Treetype, colour = Treetype))+
+  geom_boxplot()+ ggtitle("Bees abundance all season")
+
+ggplot(data = Bestuivers_master, aes(x=as.factor(Treetype), y = b_SR, fill = Treetype, colour = Treetype))+
+  geom_boxplot()+ ggtitle("Bees richness all season")
+
+ggplot(data = Bestuivers_master_spring, aes(x=as.factor(Treetype), y = b_AB, fill = Treetype, colour = Treetype))+
+  geom_boxplot()+ ggtitle("Bees abundance spring")
+
+ggplot(data = Bestuivers_master_spring, aes(x=as.factor(Treetype), y = b_SR, fill = Treetype, colour = Treetype))+
+  geom_boxplot()+ ggtitle("Bees richness spring")
+
+ggplot(data = Bestuivers_master_summer, aes(x=as.factor(Treetype), y = b_AB, fill = Treetype, colour = Treetype))+
+  geom_boxplot()+ ggtitle("Bees abundance summer")
+
+ggplot(data = Bestuivers_master_summer, aes(x=as.factor(Treetype), y = b_SR, fill = Treetype, colour = Treetype))+
+  geom_boxplot()+ ggtitle("Bees richness summer")
+
+#-------------------------------------------------------------
+
+ggplot(data = Bestuivers_master, aes(x=as.factor(Treetype), y = s_AB, fill = Treetype, colour = Treetype))+
+  geom_boxplot()+ ggtitle("Syrphids abundance all season")
+
+ggplot(data = Bestuivers_master, aes(x=as.factor(Treetype), y = s_SR, fill = Treetype, colour = Treetype))+
+  geom_boxplot()+ ggtitle("Syrphids richness all season")
+
+ggplot(data = Bestuivers_master_spring, aes(x=as.factor(Treetype), y = s_AB, fill = Treetype, colour = Treetype))+
+  geom_boxplot()+ ggtitle("Syrphids abundance spring")
+
+ggplot(data = Bestuivers_master_spring, aes(x=as.factor(Treetype), y = s_SR, fill = Treetype, colour = Treetype))+
+  geom_boxplot()+ ggtitle("Syrphids richness spring")
+
+ggplot(data = Bestuivers_master_summer, aes(x=as.factor(Treetype), y = s_AB, fill = Treetype, colour = Treetype))+
+  geom_boxplot()+ ggtitle("Syrphids abundance summer")
+
+ggplot(data = Bestuivers_master_summer, aes(x=as.factor(Treetype), y = s_SR, fill = Treetype, colour = Treetype))+
+  geom_boxplot()+ ggtitle("Syrphids richness summer")
+
 # ABUNDANCE PER SESSION
 
 ## BESTUIVERS
-plotAB_session <- ggplot(data = Bestuivers_master, aes(x = as.factor(Session), y = best_AB, fill = Treetype, colour = Treetype)) + geom_boxplot() + theme(axis.title = element_blank())
-plotAB_session_spring <- ggplot(data = Bestuivers_master_spring, aes(x = as.factor(Session), y = best_AB, fill = Treetype, colour = Treetype)) + geom_boxplot() + theme(axis.title = element_blank())
-plotAB_session_summer <- ggplot(data = Bestuivers_master_summer, aes(x = as.factor(Session), y = best_AB, fill = Treetype, colour = Treetype)) + geom_boxplot() + theme(axis.title = element_blank())
+plotAB_session <- ggplot(data = Bestuivers_master, aes(x = as.factor(Session), y = best_AB, fill = Treetype, colour = Treetype)) + geom_boxplot() + theme(axis.title = element_blank()) 
+plotAB_session_spring <- ggplot(data = Bestuivers_master_spring, aes(x = as.factor(Session), y = best_AB, fill = Treetype, colour = Treetype)) + geom_boxplot() + theme(axis.title = element_blank()) 
+plotAB_session_summer <- ggplot(data = Bestuivers_master_summer, aes(x = as.factor(Session), y = best_AB, fill = Treetype, colour = Treetype)) + geom_boxplot() + theme(axis.title = element_blank()) 
 ggarrange(plotAB_session, plotAB_session_spring, plotAB_session_summer, labels = c("overall", "spring", "summer"), nrow = 1, common.legend = TRUE, legend = "bottom") %>% 
   annotate_figure(., top = text_grob("Total pollinator abundance per session"))
 
@@ -938,9 +1060,6 @@ ggarrange(plotSR_ImageCover_s, plotSR_ImageCover_spring_s, plotSR_ImageCover_sum
 
 
 ```{r NMDS, echo=FALSE, warning=FALSE, message=FALSE, results='hide'}
-library(ape)
-library(vegan)
-
 ###Bees
 
 # Make species-abundance matrix summing two traps together
@@ -957,14 +1076,12 @@ species_bees_nmds <- b_wide_complete %>%
 species_bees_nmds <- species_bees_nmds[rowSums(species_bees_nmds[, -c(0:2)])!= 0, ]
 bees_LU <- species_bees_nmds[, 2]
 
-
 rownames(species_bees_nmds) <- paste(species_bees_nmds$Location, species_bees_nmds$Treetype)
 
 # Remove columns Location and Landuse 
 species_bees_nmds_clean <- species_bees_nmds[, -c(0:2)] 
 species_bees_nmds_clean <- as.matrix(species_bees_nmds_clean)
 
-library(tibble) 
 # for the function rownames_to_column
 # species_bee_nmds_clean_noempty <- as.data.frame(species_bee_nmds_clean) %>%
 #   rownames_to_column("sample") %>% 
@@ -974,14 +1091,81 @@ library(tibble)
 # in dplyr, you should not have row names, you want them to be in seperate columns,
 # but for the metaMDS, you want the name of your sample (Location-Landuse) as a rowname
 
+#---------------------------------
+
+species_bees_nmds_overall <- b_wide_complete %>%
+   subset(select = -c(Trap, Micrandrena_spec., Lasioglossum_spec., Andrena_spec., `Bombus _onbekend`)) %>%
+   group_by(Location, Treetype, Session) %>%
+   summarise(across(everything(), sum)) %>%
+   ungroup() %>%
+   dplyr::select(where(~ any(. != 0))) %>%
+   as.data.frame()
+
+species_bees_nmds_spring <- filter(species_bees_nmds_overall, Session < 5)
+species_bees_nmds_summer <- filter(species_bees_nmds_overall, Session > 4)
+ 
+species_bees_nmds_overall <- species_bees_nmds_overall[rowSums(species_bees_nmds_overall[, -c(0:3)])!= 0, ]
+bees_LU_overall <- species_bees_nmds_overall[, 2]
+
+species_bees_nmds_spring <- species_bees_nmds_spring[rowSums(species_bees_nmds_spring[, -c(0:3)])!= 0, ]
+bees_LU_spring <- species_bees_nmds_spring[, 2]
+
+species_bees_nmds_summer <- species_bees_nmds_summer[rowSums(species_bees_nmds_summer[, -c(0:3)])!= 0, ]
+bees_LU_summer <- species_bees_nmds_summer[, 2]
+
+rownames(species_bees_nmds_overall) <- paste(species_bees_nmds_overall$Location, species_bees_nmds_overall$Treetype, species_bees_nmds_overall$Session)
+
+rownames(species_bees_nmds_spring) <- paste(species_bees_nmds_spring$Location, species_bees_nmds_spring$Treetype, species_bees_nmds_spring$Session)
+
+rownames(species_bees_nmds_summer) <- paste(species_bees_nmds_summer$Location, species_bees_nmds_summer$Treetype, species_bees_nmds_summer$Session)
+ 
+species_bees_nmds_clean_overall <- species_bees_nmds_overall[, -c(0:3)] 
+species_bees_nmds_clean_overall <- as.matrix(species_bees_nmds_clean_overall)
+
+species_bees_nmds_clean_spring <- species_bees_nmds_spring[, -c(0:3)]
+species_bees_nmds_clean_spring <- as.matrix(species_bees_nmds_clean_spring)
+
+species_bees_nmds_clean_summer <- species_bees_nmds_summer[, -c(0:3)]
+species_bees_nmds_clean_summer <- as.matrix(species_bees_nmds_clean_summer)
 
 # For the NMDS plot, you will want to have an easy way to add a column containing the tree type
 # This is why you do the following:
-species_bees_nmds_noempty <- species_bees_nmds[rowSums(species_bees_nmds_clean)!=0,] 
-
+species_bees_nmds_noempty <- species_bees_nmds[rowSums(species_bees_nmds_clean)!=0,]
 # Now to have the community matrix without empty rows for the metaMDS:
 species_bees_nmds_clean_noempty <- species_bees_nmds_clean[rowSums(species_bees_nmds_clean)!=0,]
-# spec_April_clean had 45 rows (45 study sites), when empty rows, without any syrphids, are removed, we end up with 31 rows/study sites
+
+species_bees_nmds_noempty_overall <- species_bees_nmds_overall[rowSums(species_bees_nmds_clean_overall)!=0,]
+species_bees_nmds_clean_noempty_overall <- species_bees_nmds_clean_overall[rowSums(species_bees_nmds_clean_overall)!=0,]
+
+species_bees_nmds_noempty_spring <- species_bees_nmds_spring[rowSums(species_bees_nmds_clean_spring)!=0,]
+species_bees_nmds_clean_noempty_spring <- species_bees_nmds_clean_spring[rowSums(species_bees_nmds_clean_spring)!=0,]
+
+species_bees_nmds_noempty_summer <- species_bees_nmds_summer[rowSums(species_bees_nmds_clean_summer)!=0,]
+species_bees_nmds_clean_noempty_summer <- species_bees_nmds_clean_summer[rowSums(species_bees_nmds_clean_summer)!=0,]
+
+b_numberperspecies <- colSums(species_bees_nmds_clean_noempty)
+
+b_numberperspecies_overall <- colSums(species_bees_nmds_clean_noempty_overall)
+
+b_numberperspecies_spring <- colSums(species_bees_nmds_clean_noempty_spring)
+
+b_numberperspecies_summer <- colSums(species_bees_nmds_clean_noempty_summer)
+
+species_syrphids_nmds_clean_noempty_multiple_ind <- as.data.frame(species_bees_nmds_clean_noempty[, as.numeric(which(b_numberperspecies > 1))])
+species_syrphids_nmds_clean_noempty_overall_multiple_ind <- as.data.frame(species_bees_nmds_clean_noempty_overall[, as.numeric(which(b_numberperspecies_overall > 1))])
+species_syrphids_nmds_clean_noempty_spring_multiple_ind <- as.data.frame(species_bees_nmds_clean_noempty_spring[, as.numeric(which(b_numberperspecies_spring > 1))])
+species_syrphids_nmds_clean_noempty_summer_multiple_ind <- as.data.frame(species_bees_nmds_clean_noempty_summer[, as.numeric(which(b_numberperspecies_summer > 1))])
+
+#INDIEN ALLE SOORTEN WEGGELATEN WORDEN MET 1 INDIVIDU DAN GEBRUIK ONDERSTAANDE CODE
+species_bees_nmds_clean_noempty <- species_bees_nmds_clean_noempty_multiple_ind
+species_bees_nmds_clean_noempty <- species_bees_nmds_clean_noempty[rowSums(species_bees_nmds_clean_noempty)!=0,]
+species_bees_nmds_clean_noempty_overall <- species_bees_nmds_clean_noempty_overall_multiple_ind
+species_bees_nmds_clean_noempty_overall <- species_bees_nmds_clean_noempty_overall[rowSums(species_bees_nmds_clean_noempty_overall)!=0,]
+species_bees_nmds_clean_noempty_spring <- species_bees_nmds_clean_noempty_spring_multiple_ind
+species_bees_nmds_clean_noempty_spring <- species_bees_nmds_clean_noempty_spring[rowSums(species_bees_nmds_clean_noempty_spring)!=0,]
+species_bees_nmds_clean_noempty_summer <- species_bees_nmds_clean_noempty_summer_multiple_ind
+species_bees_nmds_clean_noempty_summer <- species_bees_nmds_clean_noempty_summer[rowSums(species_bees_nmds_clean_noempty_summer)!=0,]
+
 bees_nmds_results <- metaMDS(comm = species_bees_nmds_clean_noempty,
                         autotransform = FALSE,
                         distance = "bray",
@@ -990,21 +1174,68 @@ bees_nmds_results <- metaMDS(comm = species_bees_nmds_clean_noempty,
                         try = 100,
                         trymax = 100)
 
+bees_nmds_results_overall <- metaMDS(comm = species_bees_nmds_clean_noempty_overall,
+                        autotransform = FALSE,
+                        distance = "bray",
+                        k = 2,
+                        maxit = 300,
+                        try = 100,
+                        trymax = 100)
+
+bees_nmds_results_spring <-metaMDS(comm = species_bees_nmds_clean_noempty_spring,
+                        autotransform = FALSE,
+                        distance = "bray",
+                        k = 2,
+                        maxit = 300,
+                        try = 100,
+                        trymax = 100)
+
+bees_nmds_results_summer <-metaMDS(comm = species_bees_nmds_clean_noempty_summer,
+                        autotransform = FALSE,
+                        distance = "bray",
+                        k = 2,
+                        maxit = 300,
+                        try = 100,
+                        trymax = 100)
+
+#-----------------------------------------------------------------------------------------
 ###Syrphids
 
 species_syrphids_nmds <- s_wide_complete %>%
-   subset(select = -c(Trap, Syrphidae_spec., Eupeodes_spec., Melanostoma_spec., Chrysotoxum_bicinctum)) %>%
+   subset(select = -c(Session, Trap, Syrphidae_spec., Eupeodes_spec., Melanostoma_spec.)) %>%
+   group_by(Location, Treetype) %>%
+   summarise(across(everything(), sum)) %>%
+   ungroup() %>%
+   dplyr::select(where(~ any(. != 0))) %>%
+   as.data.frame()
+
+species_syrphids_nmds <- species_syrphids_nmds[rowSums(species_syrphids_nmds[, -c(0:2)])!= 0, ]
+syrphids_LU <- species_syrphids_nmds[, 2]
+
+rownames(species_syrphids_nmds) <- paste(species_syrphids_nmds$Location, species_syrphids_nmds$Treetype)
+
+species_syrphids_nmds_clean <- species_syrphids_nmds[, -c(0:2)] 
+species_syrphids_nmds_clean <- as.matrix(species_syrphids_nmds_clean)
+
+species_syrphids_nmds_noempty <- species_syrphids_nmds[rowSums(species_syrphids_nmds_clean)!=0,] 
+
+species_syrphids_nmds_clean_noempty <- species_syrphids_nmds_clean[rowSums(species_syrphids_nmds_clean)!=0,]
+
+#-----------------------------------------------------------
+
+species_syrphids_nmds_overall <- s_wide_complete %>%
+   subset(select = -c(Trap, Syrphidae_spec., Eupeodes_spec., Melanostoma_spec.)) %>%
    group_by(Location, Treetype, Session) %>%
    summarise(across(everything(), sum)) %>%
    ungroup() %>%
    dplyr::select(where(~ any(. != 0))) %>%
    as.data.frame()
 
-species_syrphids_nmds_spring <- filter(species_syrphids_nmds, Session < 5)
-species_syrphids_nmds_summer <- filter(species_syrphids_nmds, Session > 4)
-
-species_syrphids_nmds <- species_syrphids_nmds[rowSums(species_syrphids_nmds[, -c(0:3)])!= 0, ]
-syrphids_LU <- species_syrphids_nmds[, 2]
+species_syrphids_nmds_spring <- filter(species_syrphids_nmds_overall, Session < 5)
+species_syrphids_nmds_summer <- filter(species_syrphids_nmds_overall, Session > 4)
+ 
+species_syrphids_nmds_overall <- species_syrphids_nmds_overall[rowSums(species_syrphids_nmds_overall[, -c(0:3)])!= 0, ]
+syrphids_LU_overall <- species_syrphids_nmds_overall[, 2]
 
 species_syrphids_nmds_spring <- species_syrphids_nmds_spring[rowSums(species_syrphids_nmds_spring[, -c(0:3)])!= 0, ]
 syrphids_LU_spring <- species_syrphids_nmds_spring[, 2]
@@ -1012,23 +1243,23 @@ syrphids_LU_spring <- species_syrphids_nmds_spring[, 2]
 species_syrphids_nmds_summer <- species_syrphids_nmds_summer[rowSums(species_syrphids_nmds_summer[, -c(0:3)])!= 0, ]
 syrphids_LU_summer <- species_syrphids_nmds_summer[, 2]
 
-rownames(species_syrphids_nmds) <- paste(species_syrphids_nmds$Location, species_syrphids_nmds$Treetype, species_syrphids_nmds$Session)
+rownames(species_syrphids_nmds_overall) <- paste(species_syrphids_nmds_overall$Location, species_syrphids_nmds_overall$Treetype, species_syrphids_nmds_overall$Session)
 
 rownames(species_syrphids_nmds_spring) <- paste(species_syrphids_nmds_spring$Location, species_syrphids_nmds_spring$Treetype, species_syrphids_nmds_spring$Session)
 
 rownames(species_syrphids_nmds_summer) <- paste(species_syrphids_nmds_summer$Location, species_syrphids_nmds_summer$Treetype, species_syrphids_nmds_summer$Session)
+ 
+species_syrphids_nmds_clean_overall <- species_syrphids_nmds_overall[, -c(0:3)] 
+species_syrphids_nmds_clean_overall <- as.matrix(species_syrphids_nmds_clean_overall)
 
-species_syrphids_nmds_clean <- species_syrphids_nmds[, -c(0:3)] 
-species_syrphids_nmds_clean <- as.matrix(species_syrphids_nmds_clean)
-
-species_syrphids_nmds_clean_spring <- species_syrphids_nmds_spring[, -c(0:3)] 
+species_syrphids_nmds_clean_spring <- species_syrphids_nmds_spring[, -c(0:3)]
 species_syrphids_nmds_clean_spring <- as.matrix(species_syrphids_nmds_clean_spring)
 
-species_syrphids_nmds_clean_summer <- species_syrphids_nmds_summer[, -c(0:3)] 
+species_syrphids_nmds_clean_summer <- species_syrphids_nmds_summer[, -c(0:3)]
 species_syrphids_nmds_clean_summer <- as.matrix(species_syrphids_nmds_clean_summer)
 
-species_syrphids_nmds_noempty <- species_syrphids_nmds[rowSums(species_syrphids_nmds_clean)!=0,]
-species_syrphids_nmds_clean_noempty <- species_syrphids_nmds_clean[rowSums(species_syrphids_nmds_clean)!=0,]
+species_syrphids_nmds_noempty_overall <- species_syrphids_nmds_overall[rowSums(species_syrphids_nmds_clean_overall)!=0,]
+species_syrphids_nmds_clean_noempty_overall <- species_syrphids_nmds_clean_overall[rowSums(species_syrphids_nmds_clean_overall)!=0,]
 
 species_syrphids_nmds_noempty_spring <- species_syrphids_nmds_spring[rowSums(species_syrphids_nmds_clean_spring)!=0,]
 species_syrphids_nmds_clean_noempty_spring <- species_syrphids_nmds_clean_spring[rowSums(species_syrphids_nmds_clean_spring)!=0,]
@@ -1036,7 +1267,38 @@ species_syrphids_nmds_clean_noempty_spring <- species_syrphids_nmds_clean_spring
 species_syrphids_nmds_noempty_summer <- species_syrphids_nmds_summer[rowSums(species_syrphids_nmds_clean_summer)!=0,]
 species_syrphids_nmds_clean_noempty_summer <- species_syrphids_nmds_clean_summer[rowSums(species_syrphids_nmds_clean_summer)!=0,]
 
+s_numberperspecies <- colSums(species_syrphids_nmds_clean_noempty)
+
+s_numberperspecies_overall <- colSums(species_syrphids_nmds_clean_noempty_overall)
+
+s_numberperspecies_spring <- colSums(species_syrphids_nmds_clean_noempty_spring)
+
+s_numberperspecies_summer <- colSums(species_syrphids_nmds_clean_noempty_summer)
+
+species_syrphids_nmds_clean_noempty_multiple_ind <- as.data.frame(species_syrphids_nmds_clean_noempty[, as.numeric(which(s_numberperspecies > 1))])
+species_syrphids_nmds_clean_noempty_overall_multiple_ind <- as.data.frame(species_syrphids_nmds_clean_noempty_overall[, as.numeric(which(s_numberperspecies_overall > 1))])
+species_syrphids_nmds_clean_noempty_spring_multiple_ind <- as.data.frame(species_syrphids_nmds_clean_noempty_spring[, as.numeric(which(s_numberperspecies_spring > 1))])
+species_syrphids_nmds_clean_noempty_summer_multiple_ind <- as.data.frame(species_syrphids_nmds_clean_noempty_summer[, as.numeric(which(s_numberperspecies_summer > 1))])
+  
+#INDIEN ALLE SOORTEN WEGGELATEN WORDEN MET 1 INDIVIDU DAN GEBRUIK ONDERSTAANDE CODE
+species_syrphids_nmds_clean_noempty <- species_syrphids_nmds_clean_noempty_multiple_ind
+species_syrphids_nmds_clean_noempty <- species_syrphids_nmds_clean_noempty[rowSums(species_syrphids_nmds_clean_noempty)!=0,]
+species_syrphids_nmds_clean_noempty_overall <- species_syrphids_nmds_clean_noempty_overall_multiple_ind
+species_syrphids_nmds_clean_noempty_overall <- species_syrphids_nmds_clean_noempty_overall[rowSums(species_syrphids_nmds_clean_noempty_overall)!=0,]
+species_syrphids_nmds_clean_noempty_spring <- species_syrphids_nmds_clean_noempty_spring_multiple_ind
+species_syrphids_nmds_clean_noempty_spring <- species_syrphids_nmds_clean_noempty_spring[rowSums(species_syrphids_nmds_clean_noempty_spring)!=0,]
+species_syrphids_nmds_clean_noempty_summer <- species_syrphids_nmds_clean_noempty_summer_multiple_ind
+species_syrphids_nmds_clean_noempty_summer <- species_syrphids_nmds_clean_noempty_summer[rowSums(species_syrphids_nmds_clean_noempty_summer)!=0,]
+
 syrphids_nmds_results <- metaMDS(comm = species_syrphids_nmds_clean_noempty,
+                        autotransform = FALSE,
+                        distance = "bray",
+                        k = 2,
+                        maxit = 300,
+                        try = 100,
+                        trymax = 100)
+
+syrphids_nmds_results_overall <- metaMDS(comm = species_syrphids_nmds_clean_noempty_overall,
                         autotransform = FALSE,
                         distance = "bray",
                         k = 2,
@@ -1059,37 +1321,267 @@ syrphids_nmds_results_summer <-metaMDS(comm = species_syrphids_nmds_clean_noempt
                         maxit = 300,
                         try = 100,
                         trymax = 100)
+
+#ALL POLLINATORS __________________________________________________________________________
+
+species_pollinator_nmds <- species_bees_nmds %>% 
+  left_join(., species_syrphids_nmds, by = c("Location", "Treetype"))
+  
+species_pollinator_nmds <- species_pollinator_nmds[rowSums(species_pollinator_nmds[, -c(0:2)])!= 0, ]
+pollinator_LU <- species_pollinator_nmds[, 2]
+
+rownames(species_pollinator_nmds) <- paste(species_pollinator_nmds$Location, species_pollinator_nmds$Treetype)
+
+species_pollinator_nmds_clean <- species_pollinator_nmds[, -c(0:2)] 
+species_pollinator_nmds_clean <- as.matrix(species_pollinator_nmds_clean)
+
+species_pollinator_nmds_noempty <- species_pollinator_nmds[rowSums(species_pollinator_nmds_clean)!=0,] 
+
+species_pollinator_nmds_clean_noempty <- species_pollinator_nmds_clean[rowSums(species_pollinator_nmds_clean)!=0,]
+
+species_pollinator_nmds_overall <- species_bees_nmds_overall %>% 
+  full_join(., species_syrphids_nmds_overall, by = c("Location", "Treetype", "Session")) %>% 
+  mutate(across(where(is.numeric), ~ replace_na(.x, 0)))
+
+species_pollinator_nmds_spring <- species_bees_nmds_spring %>% 
+  full_join(., species_syrphids_nmds_spring, by = c("Location", "Treetype", "Session"))%>% 
+  mutate(across(where(is.numeric), ~ replace_na(.x, 0)))
+
+species_pollinator_nmds_summer <- species_bees_nmds_summer %>% 
+  full_join(., species_syrphids_nmds_summer, by = c("Location", "Treetype", "Session"))%>% 
+  mutate(across(where(is.numeric), ~ replace_na(.x, 0)))
+
+rownames(species_pollinator_nmds_overall) <- paste(species_pollinator_nmds_overall$Location, species_pollinator_nmds_overall$Treetype, species_pollinator_nmds_overall$Session)
+
+rownames(species_pollinator_nmds_spring) <- paste(species_pollinator_nmds_spring$Location, species_pollinator_nmds_spring$Treetype, species_pollinator_nmds_spring$Session)
+
+rownames(species_pollinator_nmds_summer) <- paste(species_pollinator_nmds_summer$Location, species_pollinator_nmds_summer$Treetype, species_pollinator_nmds_summer$Session)
+
+species_pollinator_nmds_overall <- species_pollinator_nmds_overall[rowSums(species_pollinator_nmds_overall[, -c(0:3)])!= 0, ]
+pollinator_LU_overall <- species_pollinator_nmds_overall[, 2]
+
+species_pollinator_nmds_spring <- species_pollinator_nmds_spring[rowSums(species_pollinator_nmds_spring[, -c(0:3)])!= 0, ]
+pollinator_LU_spring <- species_pollinator_nmds_spring[, 2]
+
+species_pollinator_nmds_summer <- species_pollinator_nmds_summer[rowSums(species_pollinator_nmds_summer[, -c(0:3)])!= 0, ]
+pollinator_LU_summer <- species_pollinator_nmds_summer[, 2]
+ 
+species_pollinator_nmds_clean_overall <- species_pollinator_nmds_overall[, -c(0:3)] 
+species_pollinator_nmds_clean_overall <- as.matrix(species_pollinator_nmds_clean_overall)
+
+species_pollinator_nmds_clean_spring <- species_pollinator_nmds_spring[, -c(0:3)]
+species_pollinator_nmds_clean_spring <- as.matrix(species_pollinator_nmds_clean_spring)
+
+species_pollinator_nmds_clean_summer <- species_pollinator_nmds_summer[, -c(0:3)]
+species_pollinator_nmds_clean_summer <- as.matrix(species_pollinator_nmds_clean_summer)
+
+species_pollinator_nmds_noempty_overall <- species_pollinator_nmds_overall[rowSums(species_pollinator_nmds_clean_overall)!=0,]
+species_pollinator_nmds_clean_noempty_overall <- species_pollinator_nmds_clean_overall[rowSums(species_pollinator_nmds_clean_overall)!=0,]
+
+species_pollinator_nmds_noempty_spring <- species_pollinator_nmds_spring[rowSums(species_pollinator_nmds_clean_spring)!=0,]
+species_pollinator_nmds_clean_noempty_spring <- species_pollinator_nmds_clean_spring[rowSums(species_pollinator_nmds_clean_spring)!=0,]
+
+species_pollinator_nmds_noempty_summer <- species_pollinator_nmds_summer[rowSums(species_pollinator_nmds_clean_summer)!=0,]
+species_pollinator_nmds_clean_noempty_summer <- species_pollinator_nmds_clean_summer[rowSums(species_pollinator_nmds_clean_summer)!=0,]
+
+p_numberperspecies <- colSums(species_pollinator_nmds_clean_noempty)
+
+p_numberperspecies_overall <- colSums(species_pollinator_nmds_clean_noempty_overall)
+
+p_numberperspecies_spring <- colSums(species_pollinator_nmds_clean_noempty_spring)
+
+p_numberperspecies_summer <- colSums(species_pollinator_nmds_clean_noempty_summer)
+
+species_pollinator_nmds_clean_noempty_multiple_ind <- as.data.frame(species_pollinator_nmds_clean_noempty[, as.numeric(which(p_numberperspecies > 1))])
+species_pollinator_nmds_clean_noempty_overall_multiple_ind <- as.data.frame(species_pollinator_nmds_clean_noempty_overall[, as.numeric(which(p_numberperspecies_overall > 1))])
+species_pollinator_nmds_clean_noempty_spring_multiple_ind <- as.data.frame(species_pollinator_nmds_clean_noempty_spring[, as.numeric(which(p_numberperspecies_spring > 1))])
+species_pollinator_nmds_clean_noempty_summer_multiple_ind <- as.data.frame(species_pollinator_nmds_clean_noempty_summer[, as.numeric(which(p_numberperspecies_summer > 1))])
+  
+#INDIEN ALLE SOORTEN WEGGELATEN WORDEN MET 1 INDIVIDU DAN GEBRUIK ONDERSTAANDE CODE
+species_pollinator_nmds_clean_noempty <- species_pollinator_nmds_clean_noempty_multiple_ind
+species_pollinator_nmds_clean_noempty <- species_pollinator_nmds_clean_noempty[rowSums(species_pollinator_nmds_clean_noempty)!=0,]
+species_pollinator_nmds_clean_noempty_overall <- species_pollinator_nmds_clean_noempty_overall_multiple_ind
+species_pollinator_nmds_clean_noempty_overall <- species_pollinator_nmds_clean_noempty_overall[rowSums(species_pollinator_nmds_clean_noempty_overall)!=0,]
+species_pollinator_nmds_clean_noempty_spring <- species_pollinator_nmds_clean_noempty_spring_multiple_ind
+species_pollinator_nmds_clean_noempty_spring <- species_pollinator_nmds_clean_noempty_spring[rowSums(species_pollinator_nmds_clean_noempty_spring)!=0,]
+species_pollinator_nmds_clean_noempty_summer <- species_pollinator_nmds_clean_noempty_summer_multiple_ind
+species_pollinator_nmds_clean_noempty_summer <- species_pollinator_nmds_clean_noempty_summer[rowSums(species_pollinator_nmds_clean_noempty_summer)!=0,]
+
+pollinator_nmds_results <- metaMDS(comm = species_pollinator_nmds_clean_noempty,
+                        autotransform = FALSE,
+                        distance = "bray",
+                        k = 2,
+                        maxit = 300,
+                        try = 100,
+                        trymax = 100)
+
+pollinator_nmds_results_overall <- metaMDS(comm = species_pollinator_nmds_clean_noempty_overall,
+                        autotransform = FALSE,
+                        distance = "bray",
+                        k = 2,
+                        maxit = 300,
+                        try = 100,
+                        trymax = 100)
+
+pollinator_nmds_results_spring <-metaMDS(comm = species_pollinator_nmds_clean_noempty_spring,
+                        autotransform = FALSE,
+                        distance = "bray",
+                        k = 2,
+                        maxit = 300,
+                        try = 100,
+                        trymax = 100)
+
+pollinator_nmds_results_summer <-metaMDS(comm = species_pollinator_nmds_clean_noempty_summer,
+                        autotransform = FALSE,
+                        distance = "bray",
+                        k = 2,
+                        maxit = 300,
+                        try = 100,
+                        trymax = 100)
+
 ```
 
 ## Multivariate analysis: NMDS
 ```{r plotNMDS, echo=FALSE, warning=FALSE, message=FALSE}
-
 # First create a data frame of the scores from the individual sites.
 # This data frame will contain x and y values for where sites are located.
 bees_data_scores <- as.data.frame(scores(bees_nmds_results)$sites)
 
+bees_data_scores_overall <- as.data.frame(scores(bees_nmds_results_overall)$sites)
+
+bees_data_scores_spring <- as.data.frame(scores(bees_nmds_results_spring)$sites)
+
+bees_data_scores_summer <- as.data.frame(scores(bees_nmds_results_summer)$sites)
+
 # Now add an extra column indicating which land use the community is coming from
-bees_data_scores <- cbind(bees_data_scores, species_bees_nmds_noempty[,2])
-colnames(bees_data_scores)[3] <- "Treetype"
+bees_data_scores <- rownames_to_column(bees_data_scores)
+colnames(bees_data_scores)[1] <- "Treetype"
+bees_data_scores <- bees_data_scores %>% 
+  mutate(Treetype = str_extract(Treetype,"[BOP]"))
 bees_data_scores$Treetype <- factor(bees_data_scores$Treetype,
                               levels = c("B", "O", "P"))
+
+bees_data_scores_overall <- rownames_to_column(bees_data_scores_overall)
+colnames(bees_data_scores_overall)[1] <- "Treetype"
+bees_data_scores_overall <- bees_data_scores_overall %>% 
+  mutate(Treetype = str_extract(Treetype,"[BOP]"))
+bees_data_scores_overall$Treetype <- factor(bees_data_scores_overall$Treetype,
+                              levels = c("B", "O", "P"))
+
+bees_data_scores_spring <- rownames_to_column(bees_data_scores_spring)
+colnames(bees_data_scores_spring)[1] <- "Treetype"
+bees_data_scores_spring <- bees_data_scores_spring %>% 
+  mutate(Treetype = str_extract(Treetype,"[BOP]"))
+bees_data_scores_spring$Treetype <- factor(bees_data_scores_spring$Treetype,
+                              levels = c("B", "O", "P"))
+
+bees_data_scores_summer <- rownames_to_column(bees_data_scores_summer)
+colnames(bees_data_scores_summer)[1] <- "Treetype"
+bees_data_scores_summer <- bees_data_scores_summer %>% 
+  mutate(Treetype = str_extract(Treetype,"[BOP]"))
+bees_data_scores_summer$Treetype <- factor(bees_data_scores_summer$Treetype,
+                              levels = c("B", "O", "P"))
+
 # Next, we can add the scores for species data
 bees_species_scores <- as.data.frame(scores(bees_nmds_results, "species"))
 
+bees_species_scores_overall <- as.data.frame(scores(bees_nmds_results_overall, "species"))
+
+bees_species_scores_spring <- as.data.frame(scores(bees_nmds_results_spring, "species"))
+
+bees_species_scores_summer <- as.data.frame(scores(bees_nmds_results_summer, "species"))
+
 # Add a column equivalent to the row name to create species labels
 bees_species_scores$Species <- rownames(bees_species_scores)
+
+bees_species_scores_overall$Species <- rownames(bees_species_scores_overall)
+
+bees_species_scores_spring$Species <- rownames(bees_species_scores_spring)
+
+bees_species_scores_summer$Species <- rownames(bees_species_scores_summer)
 
 # Now for the polygons/hulls:
 bees_Beech <- bees_data_scores[bees_data_scores$Treetype == "B", ][chull(bees_data_scores[bees_data_scores$Treetype == 
     "B", c("NMDS1", "NMDS2")]), ]  # hull values for forests
 
-bees_Oak <- bees_data_scores[bees_data_scores$Treetype == "O", ][chull(bees_data_scores[bees_data_scores$Treetype == 
+bees_Oak <- syrphids_data_scores[bees_data_scores$Treetype == "O", ][chull(bees_data_scores[bees_data_scores$Treetype == 
     "O", c("NMDS1", "NMDS2")]), ]  # hull values for forests
 
-bees_Poplar <- bees_data_scores[bees_data_scores$Treetype == "P", ][chull(bees_data_scores[bees_data_scores$Treetype == 
+bees_Poplar <- syrphids_data_scores[bees_data_scores$Treetype == "P", ][chull(bees_data_scores[bees_data_scores$Treetype == 
     "P", c("NMDS1", "NMDS2")]), ]  # hull values for forests
 
 bees_hull_data <- rbind(bees_Beech, bees_Oak, bees_Poplar)  
+
+#---------------------------------
+bees_Beech_overall <- bees_data_scores_overall[bees_data_scores_overall$Treetype == "B", ][chull(bees_data_scores_overall[bees_data_scores_overall$Treetype == 
+    "B", c("NMDS1", "NMDS2")]), ]  # hull values for forests
+
+bees_Oak_overall <- bees_data_scores_overall[bees_data_scores_overall$Treetype == "O", ][chull(bees_data_scores_overall[bees_data_scores_overall$Treetype == 
+    "O", c("NMDS1", "NMDS2")]), ]  # hull values for forests
+
+bees_Poplar_overall <- bees_data_scores_overall[bees_data_scores_overall$Treetype == "P", ][chull(bees_data_scores_overall[bees_data_scores_overall$Treetype == 
+    "P", c("NMDS1", "NMDS2")]), ]  # hull values for forests
+
+bees_hull_data_overall <- rbind(bees_Beech_overall, bees_Oak_overall, bees_Poplar_overall) 
+
+#---------------------------------
+
+bees_Beech_spring <- bees_data_scores_spring[bees_data_scores_spring$Treetype == "B", ][chull(bees_data_scores_spring[bees_data_scores_spring$Treetype == 
+    "B", c("NMDS1", "NMDS2")]), ]  # hull values for forests
+
+bees_Oak_spring <- bees_data_scores_spring[bees_data_scores_spring$Treetype == "O", ][chull(bees_data_scores_spring[bees_data_scores_spring$Treetype == 
+    "O", c("NMDS1", "NMDS2")]), ]  # hull values for forests
+
+bees_Poplar_spring <- bees_data_scores_spring[bees_data_scores_spring$Treetype == "P", ][chull(bees_data_scores_spring[bees_data_scores_spring$Treetype == 
+    "P", c("NMDS1", "NMDS2")]), ]  # hull values for forests
+
+bees_hull_data_spring <- rbind(bees_Beech_spring, bees_Oak_spring, bees_Poplar_spring)  
+
+#---------------------------------
+
+bees_Beech_summer <- bees_data_scores_summer[bees_data_scores_summer$Treetype == "B", ][chull(bees_data_scores_summer[bees_data_scores_summer$Treetype == 
+    "B", c("NMDS1", "NMDS2")]), ]  # hull values for forests
+
+bees_Oak_summer <- bees_data_scores_summer[bees_data_scores_summer$Treetype == "O", ][chull(bees_data_scores_summer[bees_data_scores_summer$Treetype == 
+    "O", c("NMDS1", "NMDS2")]), ]  # hull values for forests
+
+bees_Poplar_summer <- bees_data_scores_summer[bees_data_scores_summer$Treetype == "P", ][chull(bees_data_scores_summer[bees_data_scores_summer$Treetype == 
+    "P", c("NMDS1", "NMDS2")]), ]  # hull values for forests
+
+bees_hull_data_summer <- rbind(bees_Beech_summer, bees_Oak_summer, bees_Poplar_summer)  
+
+bees_MDS_xy <- data.frame(bees_nmds_results$points)
+bees_MDS_xy <- rownames_to_column(bees_MDS_xy)
+colnames(bees_MDS_xy)[1] <- "Treetype"
+bees_MDS_xy <- bees_MDS_xy %>% 
+  mutate(Treetype = str_extract(Treetype,"[BOP]"))
+bees_MDS_xy$Treetype <- factor(bees_MDS_xy$Treetype, 
+                         levels = c("B", "O", "P"))
+
+bees_MDS_xy_overall <- data.frame(bees_nmds_results_overall$points)
+bees_MDS_xy_overall <- rownames_to_column(bees_MDS_xy_overall)
+colnames(bees_MDS_xy_overall)[1] <- "Treetype"
+bees_MDS_xy_overall <- bees_MDS_xy_overall %>% 
+  mutate(Treetype = str_extract(Treetype,"[BOP]"))
+bees_MDS_xy_overall$Treetype <- factor(bees_MDS_xy_overall$Treetype, 
+                         levels = c("B", "O", "P"))
+
+bees_MDS_xy_spring <- data.frame(bees_nmds_results_spring$points)
+bees_MDS_xy_spring <- rownames_to_column(bees_MDS_xy_spring)
+colnames(bees_MDS_xy_spring)[1] <- "Treetype"
+bees_MDS_xy_spring <- bees_MDS_xy_spring %>% 
+  mutate(Treetype = str_extract(Treetype,"[BOP]"))
+bees_MDS_xy_spring$Treetype <- factor(bees_MDS_xy_spring$Treetype, 
+                         levels = c("B", "O", "P"))
+
+bees_MDS_xy_summer <- data.frame(bees_nmds_results_summer$points)
+bees_MDS_xy_summer <- rownames_to_column(bees_MDS_xy_summer)
+colnames(bees_MDS_xy_summer)[1] <- "Treetype"
+bees_MDS_xy_summer <- bees_MDS_xy_summer %>% 
+  mutate(Treetype = str_extract(Treetype,"[BOP]"))
+bees_MDS_xy_summer$Treetype <- factor(bees_MDS_xy_summer$Treetype, 
+                         levels = c("B", "O", "P"))
+
 
 # Now we can build the plot!
 
@@ -1111,11 +1603,31 @@ ggplot() +
   theme_minimal() +
   theme(legend.position = "right",
         text = element_text(size = 12))+
-  ggtitle("NMDS bees polygon")
+  ggtitle("NMDS bees polygon original sessions pooled")
 
-bees_MDS_xy <- data.frame(bees_nmds_results$points)
-bees_MDS_xy$Treetype <- factor(bees_LU, 
-                         levels = c("B", "O", "P"))
+#----------------------------------------
+
+ggplot() +
+  geom_polygon(data=bees_hull_data_overall,aes(x = NMDS1, y = NMDS2, 
+                                  color = Treetype, 
+                                  fill = Treetype,
+                                  group = Treetype),alpha=0.30) +
+  scale_fill_manual(values = c("#D55E00", "#F0E442", "#009E73"),
+                     name = "Treetype") +
+  geom_text(data = bees_species_scores_overall, aes(x = NMDS1, y = NMDS2, label = Species),
+            alpha = 0.5, size = 2.5) +
+  geom_point(data = bees_data_scores_overall, aes(x = NMDS1, y = NMDS2, 
+                                     color = Treetype), size = 2.5) +
+  scale_color_manual(values = c("#D55E00", "#F0E442", "#009E73"),
+                     name = "Treetype") +
+  annotate(geom = "label", x = -1, y = 2, size = 4,
+           label = paste("Stress: ", round(bees_nmds_results_overall$stress, digits = 3))) +
+  theme_minimal() +
+  theme(legend.position = "right",
+        text = element_text(size = 12))+
+  ggtitle("NMDS bees polygon all season")
+
+#----------------------------------------
 
 ggplot() +
   stat_ellipse(data = bees_MDS_xy, geom = "polygon", aes(MDS1, MDS2, 
@@ -1139,10 +1651,81 @@ ggplot() +
         panel.grid.major = element_blank(),
         panel.grid.minor = element_blank(), 
         axis.line = element_line(colour = "darkgrey"))+
-  ggtitle("NMDS bees ellips") 
+  ggtitle("NMDS bees ellips original sessions pooled") 
+
+ggplot() +
+  stat_ellipse(data = bees_MDS_xy_overall, geom = "polygon", aes(MDS1, MDS2, 
+                                                    color = Treetype, 
+                                                    fill = Treetype), alpha = 0.3) +
+  geom_point(data = bees_data_scores_overall, aes(x = NMDS1, y = NMDS2, 
+                                     shape = Treetype, color = Treetype),
+             size = 2) +
+  scale_fill_manual(values = c("#D55E00", "#F0E442", "#009E73"),
+                    name = "Treetype") +
+  scale_color_manual(values = c("#D55E00", "#F0E442", "#009E73"),
+                     name = "Treetype") +
+  scale_shape_manual(values = c(15, 16, 17)) +
+  annotate(geom = "label", x = -1, y = 2, size = 4,
+           label = paste("Stress: ", round(bees_nmds_results_overall$stress, digits = 3))) +
+  geom_text(data = bees_species_scores_overall, aes(x = NMDS1, y = NMDS2, label = Species),
+            alpha = 0.5, size = 1.5) +
+  theme_minimal() +
+  theme(text = element_text(size = 12),
+        panel.border = element_blank(), 
+        panel.grid.major = element_blank(),
+        panel.grid.minor = element_blank(), 
+        axis.line = element_line(colour = "darkgrey"))+
+  ggtitle("NMDS bees ellips all season") 
+
+ggplot() +
+  stat_ellipse(data = bees_MDS_xy_spring, geom = "polygon", aes(MDS1, MDS2, 
+                                                    color = Treetype, 
+                                                    fill = Treetype), alpha = 0.3) +
+  geom_point(data = bees_data_scores_spring, aes(x = NMDS1, y = NMDS2, 
+                                     shape = Treetype, color = Treetype),
+             size = 2) +
+  scale_fill_manual(values = c("#D55E00", "#F0E442", "#009E73"),
+                    name = "Treetype") +
+  scale_color_manual(values = c("#D55E00", "#F0E442", "#009E73"),
+                     name = "Treetype") +
+  scale_shape_manual(values = c(15, 16, 17)) +
+  annotate(geom = "label", x = -1, y = 2, size = 4,
+           label = paste("Stress: ", round(bees_nmds_results_spring$stress, digits = 3))) +
+  geom_text(data = bees_species_scores_spring, aes(x = NMDS1, y = NMDS2, label = Species),
+            alpha = 0.5, size = 1.5) +
+  theme_minimal() +
+  theme(text = element_text(size = 12),
+        panel.border = element_blank(), 
+        panel.grid.major = element_blank(),
+        panel.grid.minor = element_blank(), 
+        axis.line = element_line(colour = "darkgrey"))+
+  ggtitle("NMDS bees ellips spring") 
+
+ggplot() +
+  stat_ellipse(data = bees_MDS_xy_summer, geom = "polygon", aes(MDS1, MDS2, 
+                                                    color = Treetype, 
+                                                    fill = Treetype), alpha = 0.3) +
+  geom_point(data = bees_data_scores_summer, aes(x = NMDS1, y = NMDS2, 
+                                     shape = Treetype, color = Treetype),
+             size = 2) +
+  scale_fill_manual(values = c("#D55E00", "#F0E442", "#009E73"),
+                    name = "Treetype") +
+  scale_color_manual(values = c("#D55E00", "#F0E442", "#009E73"),
+                     name = "Treetype") +
+  scale_shape_manual(values = c(15, 16, 17)) +
+  annotate(geom = "label", x = -1, y = 2, size = 4,
+           label = paste("Stress: ", round(bees_nmds_results_summer$stress, digits = 3))) +
+  geom_text(data = bees_species_scores_summer, aes(x = NMDS1, y = NMDS2, label = Species),
+            alpha = 0.5, size = 1.5) +
+  theme_minimal() +
+  theme(text = element_text(size = 12),
+        panel.border = element_blank(), 
+        panel.grid.major = element_blank(),
+        panel.grid.minor = element_blank(), 
+        axis.line = element_line(colour = "darkgrey"))+
+  ggtitle("NMDS bees ellips summer") 
 
 # indicator species bees
-library(indicspecies)
 bees_data <- species_bees_nmds %>%
  subset(select = -c(Location, Treetype))
  Treetype <- species_bees_nmds$Treetype
@@ -1150,9 +1733,32 @@ bees_data <- species_bees_nmds %>%
                  Treetype, 
                  func = "r.g", control = how(nperm=999))
  summary(bees_inv, alpha = 0.05)
- # alpha geeft significantieniveau vanaf wanneer hij soorten als specifiek voor boomtype beschouwt
  
- #ind_species_scores <- species_scores %>%
+ bees_data_overall <- species_bees_nmds_overall %>%
+ subset(select = -c(Location, Treetype, Session))
+ Treetype <- species_bees_nmds_overall$Treetype
+ bees_inv_overall = multipatt(bees_data_overall, 
+                 Treetype, 
+                 func = "r.g", control = how(nperm=999))
+ summary(bees_inv_overall, alpha = 0.05)
+ 
+ bees_data_spring <- species_bees_nmds_spring %>%
+ subset(select = -c(Location, Treetype, Session))
+ Treetype <- species_bees_nmds_spring$Treetype
+ bees_inv_spring = multipatt(bees_data_spring, 
+                 Treetype, 
+                 func = "r.g", control = how(nperm=999))
+ summary(bees_inv_spring, alpha = 0.05)
+ 
+ bees_data_summer <- species_bees_nmds_summer %>%
+ subset(select = -c(Location, Treetype, Session))
+ Treetype <- species_bees_nmds_summer$Treetype
+ bees_inv_summer = multipatt(bees_data_summer, 
+                 Treetype, 
+                 func = "r.g", control = how(nperm=999))
+ summary(bees_inv_summer, alpha = 0.05)
+ 
+#ind_species_scores <- species_scores %>%
 #   rownames_to_column("Species") %>%
 #   subset(subset = Species %in% c("Andrena_clarkella",
 #                                  "Osmia_bicornis", "Andrena_haemorrhoa",
@@ -1162,32 +1768,50 @@ bees_data <- species_bees_nmds %>%
 # ind_species_scores <- ind_species_scores %>%
 #   select(-Species)
 
+#---------------------------------------------------------------------------------------------------------
 ###Syrphids
 
 syrphids_data_scores <- as.data.frame(scores(syrphids_nmds_results)$sites)
+
+syrphids_data_scores_overall <- as.data.frame(scores(syrphids_nmds_results_overall)$sites)
 
 syrphids_data_scores_spring <- as.data.frame(scores(syrphids_nmds_results_spring)$sites)
 
 syrphids_data_scores_summer <- as.data.frame(scores(syrphids_nmds_results_summer)$sites)
 
 # Now add an extra column indicating which land use the community is coming from
-syrphids_data_scores <- cbind(syrphids_data_scores, species_syrphids_nmds_noempty[,2])
-colnames(syrphids_data_scores)[3] <- "Treetype"
+syrphids_data_scores <- rownames_to_column(syrphids_data_scores)
+colnames(syrphids_data_scores)[1] <- "Treetype"
+syrphids_data_scores <- syrphids_data_scores %>% 
+  mutate(Treetype = str_extract(Treetype,"[BOP]"))
 syrphids_data_scores$Treetype <- factor(syrphids_data_scores$Treetype,
                               levels = c("B", "O", "P"))
 
-syrphids_data_scores_spring <- cbind(syrphids_data_scores_spring, species_syrphids_nmds_noempty_spring[,2])
-colnames(syrphids_data_scores_spring)[3] <- "Treetype"
+syrphids_data_scores_overall <- rownames_to_column(syrphids_data_scores_overall)
+colnames(syrphids_data_scores_overall)[1] <- "Treetype"
+syrphids_data_scores_overall <- syrphids_data_scores_overall %>% 
+  mutate(Treetype = str_extract(Treetype,"[BOP]"))
+syrphids_data_scores_overall$Treetype <- factor(syrphids_data_scores_overall$Treetype,
+                              levels = c("B", "O", "P"))
+
+syrphids_data_scores_spring <- rownames_to_column(syrphids_data_scores_spring)
+colnames(syrphids_data_scores_spring)[1] <- "Treetype"
+syrphids_data_scores_spring <- syrphids_data_scores_spring %>% 
+  mutate(Treetype = str_extract(Treetype,"[BOP]"))
 syrphids_data_scores_spring$Treetype <- factor(syrphids_data_scores_spring$Treetype,
                               levels = c("B", "O", "P"))
 
-syrphids_data_scores_summer <- cbind(syrphids_data_scores_summer, species_syrphids_nmds_noempty_summer[,2])
-colnames(syrphids_data_scores_summer)[3] <- "Treetype"
+syrphids_data_scores_summer <- rownames_to_column(syrphids_data_scores_summer)
+colnames(syrphids_data_scores_summer)[1] <- "Treetype"
+syrphids_data_scores_summer <- syrphids_data_scores_summer %>% 
+  mutate(Treetype = str_extract(Treetype,"[BOP]"))
 syrphids_data_scores_summer$Treetype <- factor(syrphids_data_scores_summer$Treetype,
                               levels = c("B", "O", "P"))
 
 # Next, we can add the scores for species data
 syrphids_species_scores <- as.data.frame(scores(syrphids_nmds_results, "species"))
+
+syrphids_species_scores_overall <- as.data.frame(scores(syrphids_nmds_results_overall, "species"))
 
 syrphids_species_scores_spring <- as.data.frame(scores(syrphids_nmds_results_spring, "species"))
 
@@ -1195,6 +1819,8 @@ syrphids_species_scores_summer <- as.data.frame(scores(syrphids_nmds_results_sum
 
 # Add a column equivalent to the row name to create species labels
 syrphids_species_scores$Species <- rownames(syrphids_species_scores)
+
+syrphids_species_scores_overall$Species <- rownames(syrphids_species_scores_overall)
 
 syrphids_species_scores_spring$Species <- rownames(syrphids_species_scores_spring)
 
@@ -1211,6 +1837,18 @@ syrphids_Poplar <- syrphids_data_scores[syrphids_data_scores$Treetype == "P", ][
     "P", c("NMDS1", "NMDS2")]), ]  # hull values for forests
 
 syrphids_hull_data <- rbind(syrphids_Beech, syrphids_Oak, syrphids_Poplar)  
+
+#---------------------------------
+syrphids_Beech_overall <- syrphids_data_scores_overall[syrphids_data_scores_overall$Treetype == "B", ][chull(syrphids_data_scores_overall[syrphids_data_scores_overall$Treetype == 
+    "B", c("NMDS1", "NMDS2")]), ]  # hull values for forests
+
+syrphids_Oak_overall <- syrphids_data_scores_overall[syrphids_data_scores_overall$Treetype == "O", ][chull(syrphids_data_scores_overall[syrphids_data_scores_overall$Treetype == 
+    "O", c("NMDS1", "NMDS2")]), ]  # hull values for forests
+
+syrphids_Poplar_overall <- syrphids_data_scores_overall[syrphids_data_scores_overall$Treetype == "P", ][chull(syrphids_data_scores_overall[syrphids_data_scores_overall$Treetype == 
+    "P", c("NMDS1", "NMDS2")]), ]  # hull values for forests
+
+syrphids_hull_data_overall <- rbind(syrphids_Beech_overall, syrphids_Oak_overall, syrphids_Poplar_overall) 
 
 #---------------------------------
 
@@ -1239,15 +1877,35 @@ syrphids_Poplar_summer <- syrphids_data_scores_summer[syrphids_data_scores_summe
 syrphids_hull_data_summer <- rbind(syrphids_Beech_summer, syrphids_Oak_summer, syrphids_Poplar_summer)  
 
 syrphids_MDS_xy <- data.frame(syrphids_nmds_results$points)
-syrphids_MDS_xy$Treetype <- factor(syrphids_LU, 
+syrphids_MDS_xy <- rownames_to_column(syrphids_MDS_xy)
+colnames(syrphids_MDS_xy)[1] <- "Treetype"
+syrphids_MDS_xy <- syrphids_MDS_xy %>% 
+  mutate(Treetype = str_extract(Treetype,"[BOP]"))
+syrphids_MDS_xy$Treetype <- factor(syrphids_MDS_xy$Treetype, 
+                         levels = c("B", "O", "P"))
+
+syrphids_MDS_xy_overall <- data.frame(syrphids_nmds_results_overall$points)
+syrphids_MDS_xy_overall <- rownames_to_column(syrphids_MDS_xy_overall)
+colnames(syrphids_MDS_xy_overall)[1] <- "Treetype"
+syrphids_MDS_xy_overall <- syrphids_MDS_xy_overall %>% 
+  mutate(Treetype = str_extract(Treetype,"[BOP]"))
+syrphids_MDS_xy_overall$Treetype <- factor(syrphids_MDS_xy_overall$Treetype, 
                          levels = c("B", "O", "P"))
 
 syrphids_MDS_xy_spring <- data.frame(syrphids_nmds_results_spring$points)
-syrphids_MDS_xy_spring$Treetype <- factor(syrphids_LU_spring, 
+syrphids_MDS_xy_spring <- rownames_to_column(syrphids_MDS_xy_spring)
+colnames(syrphids_MDS_xy_spring)[1] <- "Treetype"
+syrphids_MDS_xy_spring <- syrphids_MDS_xy_spring %>% 
+  mutate(Treetype = str_extract(Treetype,"[BOP]"))
+syrphids_MDS_xy_spring$Treetype <- factor(syrphids_MDS_xy_spring$Treetype, 
                          levels = c("B", "O", "P"))
 
 syrphids_MDS_xy_summer <- data.frame(syrphids_nmds_results_summer$points)
-syrphids_MDS_xy_summer$Treetype <- factor(syrphids_LU_summer, 
+syrphids_MDS_xy_summer <- rownames_to_column(syrphids_MDS_xy_summer)
+colnames(syrphids_MDS_xy_summer)[1] <- "Treetype"
+syrphids_MDS_xy_summer <- syrphids_MDS_xy_summer %>% 
+  mutate(Treetype = str_extract(Treetype,"[BOP]"))
+syrphids_MDS_xy_summer$Treetype <- factor(syrphids_MDS_xy_summer$Treetype, 
                          levels = c("B", "O", "P"))
 
 
@@ -1271,6 +1929,28 @@ ggplot() +
   theme_minimal() +
   theme(legend.position = "right",
         text = element_text(size = 12))+
+  ggtitle("NMDS syrphids polygon original sessions pooled")
+
+#----------------------------------------
+
+ggplot() +
+  geom_polygon(data=syrphids_hull_data_overall,aes(x = NMDS1, y = NMDS2, 
+                                  color = Treetype, 
+                                  fill = Treetype,
+                                  group = Treetype),alpha=0.30) +
+  scale_fill_manual(values = c("#D55E00", "#F0E442", "#009E73"),
+                     name = "Treetype") +
+  geom_text(data = syrphids_species_scores_overall, aes(x = NMDS1, y = NMDS2, label = Species),
+            alpha = 0.5, size = 2.5) +
+  geom_point(data = syrphids_data_scores_overall, aes(x = NMDS1, y = NMDS2, 
+                                     color = Treetype), size = 2.5) +
+  scale_color_manual(values = c("#D55E00", "#F0E442", "#009E73"),
+                     name = "Treetype") +
+  annotate(geom = "label", x = -1, y = 2, size = 4,
+           label = paste("Stress: ", round(syrphids_nmds_results_overall$stress, digits = 3))) +
+  theme_minimal() +
+  theme(legend.position = "right",
+        text = element_text(size = 12))+
   ggtitle("NMDS syrphids polygon all season")
 
 #----------------------------------------
@@ -1290,6 +1970,30 @@ ggplot() +
   annotate(geom = "label", x = -1, y = 2, size = 4,
            label = paste("Stress: ", round(syrphids_nmds_results$stress, digits = 3))) +
   geom_text(data = syrphids_species_scores, aes(x = NMDS1, y = NMDS2, label = Species),
+            alpha = 0.5, size = 1.5) +
+  theme_minimal() +
+  theme(text = element_text(size = 12),
+        panel.border = element_blank(), 
+        panel.grid.major = element_blank(),
+        panel.grid.minor = element_blank(), 
+        axis.line = element_line(colour = "darkgrey"))+
+  ggtitle("NMDS syrphids ellips original sessions pooled") 
+
+ggplot() +
+  stat_ellipse(data = syrphids_MDS_xy_overall, geom = "polygon", aes(MDS1, MDS2, 
+                                                    color = Treetype, 
+                                                    fill = Treetype), alpha = 0.3) +
+  geom_point(data = syrphids_data_scores_overall, aes(x = NMDS1, y = NMDS2, 
+                                     shape = Treetype, color = Treetype),
+             size = 2) +
+  scale_fill_manual(values = c("#D55E00", "#F0E442", "#009E73"),
+                    name = "Treetype") +
+  scale_color_manual(values = c("#D55E00", "#F0E442", "#009E73"),
+                     name = "Treetype") +
+  scale_shape_manual(values = c(15, 16, 17)) +
+  annotate(geom = "label", x = -1, y = 2, size = 4,
+           label = paste("Stress: ", round(syrphids_nmds_results_overall$stress, digits = 3))) +
+  geom_text(data = syrphids_species_scores_overall, aes(x = NMDS1, y = NMDS2, label = Species),
             alpha = 0.5, size = 1.5) +
   theme_minimal() +
   theme(text = element_text(size = 12),
@@ -1349,12 +2053,20 @@ ggplot() +
 
 # indicator species syrphids
 syrphids_data <- species_syrphids_nmds %>%
- subset(select = -c(Location, Treetype, Session))
+ subset(select = -c(Location, Treetype))
  Treetype <- species_syrphids_nmds$Treetype
  syrphids_inv = multipatt(syrphids_data, 
                  Treetype, 
                  func = "r.g", control = how(nperm=999))
  summary(syrphids_inv, alpha = 0.05)
+ 
+ syrphids_data_overall <- species_syrphids_nmds_overall %>%
+ subset(select = -c(Location, Treetype, Session))
+ Treetype <- species_syrphids_nmds_overall$Treetype
+ syrphids_inv_overall = multipatt(syrphids_data_overall, 
+                 Treetype, 
+                 func = "r.g", control = how(nperm=999))
+ summary(syrphids_inv_overall, alpha = 0.05)
  
  syrphids_data_spring <- species_syrphids_nmds_spring %>%
  subset(select = -c(Location, Treetype, Session))
@@ -1371,4 +2083,744 @@ syrphids_data <- species_syrphids_nmds %>%
                  Treetype, 
                  func = "r.g", control = how(nperm=999))
  summary(syrphids_inv_summer, alpha = 0.05)
+ 
+ #---------------------------------------------------------------------------------------------------------
+###POLLINATORS
+
+pollinator_data_scores <- as.data.frame(scores(pollinator_nmds_results)$sites)
+
+pollinator_data_scores_overall <- as.data.frame(scores(pollinator_nmds_results_overall)$sites)
+
+pollinator_data_scores_spring <- as.data.frame(scores(pollinator_nmds_results_spring)$sites)
+
+pollinator_data_scores_summer <- as.data.frame(scores(pollinator_nmds_results_summer)$sites)
+
+# Now add an extra column indicating which land use the community is coming from
+pollinator_data_scores <- rownames_to_column(pollinator_data_scores)
+colnames(pollinator_data_scores)[1] <- "Treetype"
+pollinator_data_scores <- pollinator_data_scores %>% 
+  mutate(Treetype = str_extract(Treetype,"[BOP]"))
+pollinator_data_scores$Treetype <- factor(pollinator_data_scores$Treetype,
+                              levels = c("B", "O", "P"))
+
+pollinator_data_scores_overall <- rownames_to_column(pollinator_data_scores_overall)
+colnames(pollinator_data_scores_overall)[1] <- "Treetype"
+pollinator_data_scores_overall <- pollinator_data_scores_overall %>% 
+  mutate(Treetype = str_extract(Treetype,"[BOP]"))
+pollinator_data_scores_overall$Treetype <- factor(pollinator_data_scores_overall$Treetype,
+                              levels = c("B", "O", "P"))
+
+pollinator_data_scores_spring <- rownames_to_column(pollinator_data_scores_spring)
+colnames(pollinator_data_scores_spring)[1] <- "Treetype"
+pollinator_data_scores_spring <- pollinator_data_scores_spring %>% 
+  mutate(Treetype = str_extract(Treetype,"[BOP]"))
+pollinator_data_scores_spring$Treetype <- factor(pollinator_data_scores_spring$Treetype,
+                              levels = c("B", "O", "P"))
+
+pollinator_data_scores_summer <- rownames_to_column(pollinator_data_scores_summer)
+colnames(pollinator_data_scores_summer)[1] <- "Treetype"
+pollinator_data_scores_summer <- pollinator_data_scores_summer %>% 
+  mutate(Treetype = str_extract(Treetype,"[BOP]"))
+pollinator_data_scores_summer$Treetype <- factor(pollinator_data_scores_summer$Treetype,
+                              levels = c("B", "O", "P"))
+
+# Next, we can add the scores for species data
+pollinator_species_scores <- as.data.frame(scores(pollinator_nmds_results, "species"))
+
+pollinator_species_scores_overall <- as.data.frame(scores(pollinator_nmds_results_overall, "species"))
+
+pollinator_species_scores_spring <- as.data.frame(scores(pollinator_nmds_results_spring, "species"))
+
+pollinator_species_scores_summer <- as.data.frame(scores(pollinator_nmds_results_summer, "species"))
+
+# Add a column equivalent to the row name to create species labels
+pollinator_species_scores$Species <- rownames(pollinator_species_scores)
+
+pollinator_species_scores_overall$Species <- rownames(pollinator_species_scores_overall)
+
+pollinator_species_scores_spring$Species <- rownames(pollinator_species_scores_spring)
+
+pollinator_species_scores_summer$Species <- rownames(pollinator_species_scores_summer)
+
+# Now for the polygons/hulls:
+pollinator_Beech <- syrphids_data_scores[pollinator_data_scores$Treetype == "B", ][chull(pollinator_data_scores[pollinator_data_scores$Treetype == 
+    "B", c("NMDS1", "NMDS2")]), ]  # hull values for forests
+
+pollinator_Oak <- syrphids_data_scores[pollinator_data_scores$Treetype == "O", ][chull(pollinator_data_scores[pollinator_data_scores$Treetype == 
+    "O", c("NMDS1", "NMDS2")]), ]  # hull values for forests
+
+pollinator_Poplar <- syrphids_data_scores[pollinator_data_scores$Treetype == "P", ][chull(pollinator_data_scores[pollinator_data_scores$Treetype == 
+    "P", c("NMDS1", "NMDS2")]), ]  # hull values for forests
+
+pollinator_hull_data <- rbind(pollinator_Beech, pollinator_Oak, pollinator_Poplar)  
+
+#---------------------------------
+pollinator_Beech_overall <- pollinator_data_scores_overall[pollinator_data_scores_overall$Treetype == "B", ][chull(pollinator_data_scores_overall[pollinator_data_scores_overall$Treetype == 
+    "B", c("NMDS1", "NMDS2")]), ]  # hull values for forests
+
+pollinator_Oak_overall <- pollinator_data_scores_overall[pollinator_data_scores_overall$Treetype == "O", ][chull(pollinator_data_scores_overall[pollinator_data_scores_overall$Treetype == 
+    "O", c("NMDS1", "NMDS2")]), ]  # hull values for forests
+
+pollinator_Poplar_overall <- pollinator_data_scores_overall[pollinator_data_scores_overall$Treetype == "P", ][chull(pollinator_data_scores_overall[pollinator_data_scores_overall$Treetype == 
+    "P", c("NMDS1", "NMDS2")]), ]  # hull values for forests
+
+pollinator_hull_data_overall <- rbind(pollinator_Beech_overall, pollinator_Oak_overall, pollinator_Poplar_overall) 
+
+#---------------------------------
+
+pollinator_Beech_spring <- pollinator_data_scores_spring[pollinator_data_scores_spring$Treetype == "B", ][chull(pollinator_data_scores_spring[pollinator_data_scores_spring$Treetype == 
+    "B", c("NMDS1", "NMDS2")]), ]  # hull values for forests
+
+pollinator_Oak_spring <- pollinator_data_scores_spring[pollinator_data_scores_spring$Treetype == "O", ][chull(pollinator_data_scores_spring[pollinator_data_scores_spring$Treetype == 
+    "O", c("NMDS1", "NMDS2")]), ]  # hull values for forests
+
+pollinator_Poplar_spring <- pollinator_data_scores_spring[pollinator_data_scores_spring$Treetype == "P", ][chull(pollinator_data_scores_spring[pollinator_data_scores_spring$Treetype == 
+    "P", c("NMDS1", "NMDS2")]), ]  # hull values for forests
+
+pollinator_hull_data_spring <- rbind(pollinator_Beech_spring, pollinator_Oak_spring, pollinator_Poplar_spring)  
+
+#---------------------------------
+
+pollinator_Beech_summer <- pollinator_data_scores_summer[pollinator_data_scores_summer$Treetype == "B", ][chull(pollinator_data_scores_summer[pollinator_data_scores_summer$Treetype == 
+    "B", c("NMDS1", "NMDS2")]), ]  # hull values for forests
+
+pollinator_Oak_summer <- pollinator_data_scores_summer[pollinator_data_scores_summer$Treetype == "O", ][chull(pollinator_data_scores_summer[pollinator_data_scores_summer$Treetype == 
+    "O", c("NMDS1", "NMDS2")]), ]  # hull values for forests
+
+pollinator_Poplar_summer <- pollinator_data_scores_summer[pollinator_data_scores_summer$Treetype == "P", ][chull(pollinator_data_scores_summer[pollinator_data_scores_summer$Treetype == 
+    "P", c("NMDS1", "NMDS2")]), ]  # hull values for forests
+
+pollinator_hull_data_summer <- rbind(pollinator_Beech_summer, pollinator_Oak_summer, pollinator_Poplar_summer)  
+
+pollinator_MDS_xy <- data.frame(pollinator_nmds_results$points)
+pollinator_MDS_xy <- rownames_to_column(pollinator_MDS_xy)
+colnames(pollinator_MDS_xy)[1] <- "Treetype"
+pollinator_MDS_xy <- pollinator_MDS_xy %>% 
+  mutate(Treetype = str_extract(Treetype,"[BOP]"))
+pollinator_MDS_xy$Treetype <- factor(pollinator_MDS_xy$Treetype, 
+                         levels = c("B", "O", "P"))
+
+pollinator_MDS_xy_overall <- data.frame(pollinator_nmds_results_overall$points)
+pollinator_MDS_xy_overall <- rownames_to_column(pollinator_MDS_xy_overall)
+colnames(pollinator_MDS_xy_overall)[1] <- "Treetype"
+pollinator_MDS_xy_overall <- pollinator_MDS_xy_overall %>% 
+  mutate(Treetype = str_extract(Treetype,"[BOP]"))
+pollinator_MDS_xy_overall$Treetype <- factor(pollinator_MDS_xy_overall$Treetype, 
+                         levels = c("B", "O", "P"))
+
+pollinator_MDS_xy_spring <- data.frame(pollinator_nmds_results_spring$points)
+pollinator_MDS_xy_spring <- rownames_to_column(pollinator_MDS_xy_spring)
+colnames(pollinator_MDS_xy_spring)[1] <- "Treetype"
+pollinator_MDS_xy_spring <- pollinator_MDS_xy_spring %>% 
+  mutate(Treetype = str_extract(Treetype,"[BOP]"))
+pollinator_MDS_xy_spring$Treetype <- factor(pollinator_MDS_xy_spring$Treetype, 
+                         levels = c("B", "O", "P"))
+
+pollinator_MDS_xy_summer <- data.frame(pollinator_nmds_results_summer$points)
+pollinator_MDS_xy_summer <- rownames_to_column(pollinator_MDS_xy_summer)
+colnames(pollinator_MDS_xy_summer)[1] <- "Treetype"
+pollinator_MDS_xy_summer <- pollinator_MDS_xy_summer %>% 
+  mutate(Treetype = str_extract(Treetype,"[BOP]"))
+pollinator_MDS_xy_summer$Treetype <- factor(pollinator_MDS_xy_summer$Treetype, 
+                         levels = c("B", "O", "P"))
+
+
+# Now we can build the plot!
+
+ggplot() +
+  geom_polygon(data=pollinator_hull_data,aes(x = NMDS1, y = NMDS2, 
+                                  color = Treetype, 
+                                  fill = Treetype,
+                                  group = Treetype),alpha=0.30) +
+  scale_fill_manual(values = c("#D55E00", "#F0E442", "#009E73"),
+                     name = "Treetype") +
+  geom_text(data = pollinator_species_scores, aes(x = NMDS1, y = NMDS2, label = Species),
+            alpha = 0.5, size = 2.5) +
+  geom_point(data = pollinator_data_scores, aes(x = NMDS1, y = NMDS2, 
+                                     color = Treetype), size = 2.5) +
+  scale_color_manual(values = c("#D55E00", "#F0E442", "#009E73"),
+                     name = "Treetype") +
+  annotate(geom = "label", x = -1, y = 2, size = 4,
+           label = paste("Stress: ", round(pollinator_nmds_results$stress, digits = 3))) +
+  theme_minimal() +
+  theme(legend.position = "right",
+        text = element_text(size = 12))+
+  ggtitle("NMDS pollinator polygon original sessions pooled")
+
+#----------------------------------------
+
+ggplot() +
+  geom_polygon(data=pollinator_hull_data_overall,aes(x = NMDS1, y = NMDS2, 
+                                  color = Treetype, 
+                                  fill = Treetype,
+                                  group = Treetype),alpha=0.30) +
+  scale_fill_manual(values = c("#D55E00", "#F0E442", "#009E73"),
+                     name = "Treetype") +
+  geom_text(data = pollinator_species_scores_overall, aes(x = NMDS1, y = NMDS2, label = Species),
+            alpha = 0.5, size = 2.5) +
+  geom_point(data = pollinator_data_scores_overall, aes(x = NMDS1, y = NMDS2, 
+                                     color = Treetype), size = 2.5) +
+  scale_color_manual(values = c("#D55E00", "#F0E442", "#009E73"),
+                     name = "Treetype") +
+  annotate(geom = "label", x = -1, y = 2, size = 4,
+           label = paste("Stress: ", round(pollinator_nmds_results_overall$stress, digits = 3))) +
+  theme_minimal() +
+  theme(legend.position = "right",
+        text = element_text(size = 12))+
+  ggtitle("NMDS pollinator polygon all season")
+
+#----------------------------------------
+
+ggplot() +
+  stat_ellipse(data = pollinator_MDS_xy, geom = "polygon", aes(MDS1, MDS2, 
+                                                    color = Treetype, 
+                                                    fill = Treetype), alpha = 0.3) +
+  geom_point(data = pollinator_data_scores, aes(x = NMDS1, y = NMDS2, 
+                                     shape = Treetype, color = Treetype),
+             size = 2) +
+  scale_fill_manual(values = c("#D55E00", "#F0E442", "#009E73"),
+                    name = "Treetype") +
+  scale_color_manual(values = c("#D55E00", "#F0E442", "#009E73"),
+                     name = "Treetype") +
+  scale_shape_manual(values = c(15, 16, 17)) +
+  annotate(geom = "label", x = -1, y = 2, size = 4,
+           label = paste("Stress: ", round(pollinator_nmds_results$stress, digits = 3))) +
+  geom_text(data = pollinator_species_scores, aes(x = NMDS1, y = NMDS2, label = Species),
+            alpha = 0.5, size = 1.5) +
+  theme_minimal() +
+  theme(text = element_text(size = 12),
+        panel.border = element_blank(), 
+        panel.grid.major = element_blank(),
+        panel.grid.minor = element_blank(), 
+        axis.line = element_line(colour = "darkgrey"))+
+  ggtitle("NMDS pollinator ellips original sessions pooled") 
+
+ggplot() +
+  stat_ellipse(data = pollinator_MDS_xy_overall, geom = "polygon", aes(MDS1, MDS2, 
+                                                    color = Treetype, 
+                                                    fill = Treetype), alpha = 0.3) +
+  geom_point(data = pollinator_data_scores_overall, aes(x = NMDS1, y = NMDS2, 
+                                     shape = Treetype, color = Treetype),
+             size = 2) +
+  scale_fill_manual(values = c("#D55E00", "#F0E442", "#009E73"),
+                    name = "Treetype") +
+  scale_color_manual(values = c("#D55E00", "#F0E442", "#009E73"),
+                     name = "Treetype") +
+  scale_shape_manual(values = c(15, 16, 17)) +
+  annotate(geom = "label", x = -1, y = 2, size = 4,
+           label = paste("Stress: ", round(pollinator_nmds_results_overall$stress, digits = 3))) +
+  geom_text(data = pollinator_species_scores_overall, aes(x = NMDS1, y = NMDS2, label = Species),
+            alpha = 0.5, size = 1.5) +
+  theme_minimal() +
+  theme(text = element_text(size = 12),
+        panel.border = element_blank(), 
+        panel.grid.major = element_blank(),
+        panel.grid.minor = element_blank(), 
+        axis.line = element_line(colour = "darkgrey"))+
+  ggtitle("NMDS pollinator ellips all season") 
+
+ggplot() +
+  stat_ellipse(data = pollinator_MDS_xy_spring, geom = "polygon", aes(MDS1, MDS2, 
+                                                    color = Treetype, 
+                                                    fill = Treetype), alpha = 0.3) +
+  geom_point(data = pollinator_data_scores_spring, aes(x = NMDS1, y = NMDS2, 
+                                     shape = Treetype, color = Treetype),
+             size = 2) +
+  scale_fill_manual(values = c("#D55E00", "#F0E442", "#009E73"),
+                    name = "Treetype") +
+  scale_color_manual(values = c("#D55E00", "#F0E442", "#009E73"),
+                     name = "Treetype") +
+  scale_shape_manual(values = c(15, 16, 17)) +
+  annotate(geom = "label", x = -1, y = 2, size = 4,
+           label = paste("Stress: ", round(pollinator_nmds_results_spring$stress, digits = 3))) +
+  geom_text(data = pollinator_species_scores_spring, aes(x = NMDS1, y = NMDS2, label = Species),
+            alpha = 0.5, size = 1.5) +
+  theme_minimal() +
+  theme(text = element_text(size = 12),
+        panel.border = element_blank(), 
+        panel.grid.major = element_blank(),
+        panel.grid.minor = element_blank(), 
+        axis.line = element_line(colour = "darkgrey"))+
+  ggtitle("NMDS pollinator ellips spring") 
+
+ggplot() +
+  stat_ellipse(data = pollinator_MDS_xy_summer, geom = "polygon", aes(MDS1, MDS2, 
+                                                    color = Treetype, 
+                                                    fill = Treetype), alpha = 0.3) +
+  geom_point(data = pollinator_data_scores_summer, aes(x = NMDS1, y = NMDS2, 
+                                     shape = Treetype, color = Treetype),
+             size = 2) +
+  scale_fill_manual(values = c("#D55E00", "#F0E442", "#009E73"),
+                    name = "Treetype") +
+  scale_color_manual(values = c("#D55E00", "#F0E442", "#009E73"),
+                     name = "Treetype") +
+  scale_shape_manual(values = c(15, 16, 17)) +
+  annotate(geom = "label", x = -1, y = 2, size = 4,
+           label = paste("Stress: ", round(pollinator_nmds_results_summer$stress, digits = 3))) +
+  geom_text(data = pollinator_species_scores_summer, aes(x = NMDS1, y = NMDS2, label = Species),
+            alpha = 0.5, size = 1.5) +
+  theme_minimal() +
+  theme(text = element_text(size = 12),
+        panel.border = element_blank(), 
+        panel.grid.major = element_blank(),
+        panel.grid.minor = element_blank(), 
+        axis.line = element_line(colour = "darkgrey"))+
+  ggtitle("NMDS pollinator ellips summer") 
+
+# indicator species pollinators
+pollinator_data <- species_pollinator_nmds %>%
+ subset(select = -c(Location, Treetype))
+ Treetype <- species_pollinator_nmds$Treetype
+ pollinator_inv = multipatt(pollinator_data, 
+                 Treetype, 
+                 func = "r.g", control = how(nperm=999))
+ summary(pollinator_inv, alpha = 0.05)
+ 
+ pollinator_data_overall <- species_pollinator_nmds_overall %>%
+ subset(select = -c(Location, Treetype, Session))
+ Treetype <- species_pollinator_nmds_overall$Treetype
+ pollinator_inv_overall = multipatt(pollinator_data_overall, 
+                 Treetype, 
+                 func = "r.g", control = how(nperm=999))
+ summary(pollinator_inv_overall, alpha = 0.05)
+ 
+ pollinator_data_spring <- species_pollinator_nmds_spring %>%
+ subset(select = -c(Location, Treetype, Session))
+ Treetype <- species_pollinator_nmds_spring$Treetype
+ pollinator_inv_spring = multipatt(pollinator_data_spring, 
+                 Treetype, 
+                 func = "r.g", control = how(nperm=999))
+ summary(pollinator_inv_spring, alpha = 0.05)
+ 
+ pollinator_data_summer <- species_pollinator_nmds_summer %>%
+ subset(select = -c(Location, Treetype, Session))
+ Treetype <- species_pollinator_nmds_summer$Treetype
+ pollinator_inv_summer = multipatt(pollinator_data_summer, 
+                 Treetype, 
+                 func = "r.g", control = how(nperm=999))
+ summary(pollinator_inv_summer, alpha = 0.05)
+```
+
+```{r Permanova}
+
+### Testen clustering
+Treetype = as.factor(bees_MDS_xy$Treetype)
+#Jaar = as.factor(KLE_nesting2$Year)
+dissim <-vegdist(bees_MDS_xy[,c(2,3)], binary=F, method="bray", diag=T, upper=T)
+# berekenen van de dissimilariteiten voor de verschillende plots/sites/KLE's
+adonis2(dissim ~ Treetype, permutations=999, method="bray")
+# bepaal of de divlevels significant verschillen van elkaar
+bdis = betadisper(dissim, Treetype)
+anova(bdis)
+bdis
+
+### Testen clustering
+Treetype = as.factor(pollinator_MDS_xy$Treetype)
+#Jaar = as.factor(KLE_nesting2$Year)
+dissim <-vegdist(pollinator_MDS_xy[,c(2,3)], binary=F, method="bray", diag=T, upper=T)
+# berekenen van de dissimilariteiten voor de verschillende plots/sites/KLE's
+adonis2(dissim ~ Treetype, permutations=999, method="bray")
+# bepaal of de divlevels significant verschillen van elkaar
+bdis = betadisper(dissim, Treetype)
+anova(bdis)
+bdis
+
+
+```
+
+
+## Rarefaction curves
+```{r rarefaction, echo=FALSE, warning=FALSE, message=FALSE}
+
+#Bees
+
+rare_bees_treetype <- rownames_to_column(species_bees_nmds_clean_noempty)
+colnames(rare_bees_treetype)[1] <- "Treetype"
+rare_bees_treetype <- rare_bees_treetype %>% 
+  mutate(Treetype = str_extract(Treetype,"[BOP]"))
+rare_bees_treetype$Treetype <- factor(rare_bees_treetype$Treetype,
+                              levels = c("B", "O", "P"))
+rare_bees_treetype <- rare_bees_treetype %>% group_by(Treetype) %>% summarise_each(list(sum)) %>% column_to_rownames(., var = "Treetype")
+
+#total number of species at each site (row of data)
+S_b <- specnumber(species_bees_nmds_clean_noempty)
+S_b_tt <- specnumber(rare_bees_treetype)
+
+# Number of INDIVIDULS per site (?)
+raremax_b <- min(rowSums(species_bees_nmds_clean_noempty)) # = 4; 
+raremax_b_tt <- min(rowSums(rare_bees_treetype)) 
+
+# rarefy, w/ raremax as input (?)
+Srare_b <- rarefy(species_bees_nmds_clean_noempty, raremax_b)
+Srare_b_tt <- rarefy(rare_bees_treetype, raremax_b_tt)
+
+# #Steven: aantallen per soort over alle bossen + sample size gelijk aan totaal aantal gevangen bijen
+# comm_b <- colSums(species_bees_nmds_clean_noempty)
+# raremax_b <- 369 #totaal aantal bijen?
+# Srare_b <- rarefy(comm_b, raremax_b)
+# rarecurve(matrix(comm_b, nrow = 1), step = 1, sample = raremax_b, cex = 0.6)+ geom_text(title("Bees"))
+
+#Plot rarefaction results
+par(mfrow = c(1,2))
+plot(S_b, Srare_b, 
+     xlab = "Observed No. of Species", 
+     ylab = "Rarefied No. of Species",
+     main = " plot(rarefy(Bees, raremax))")
+abline(0, 1)
+rarecurve(species_bees_nmds_clean_noempty, step = 20,
+          sample = raremax_b,
+          col = "blue",
+          cex = 0.6,
+          main = "rarecurve()")
+
+par(mfrow = c(1,2))
+plot(S_b_tt, Srare_b_tt, 
+     xlab = "Observed No. of Species", 
+     ylab = "Rarefied No. of Species",
+     main = " plot(rarefy(Bees tree type, raremax))")
+abline(0, 1)
+rarecurve(rare_bees_treetype, step = 20,
+          sample = raremax_b_tt,
+          col = "blue",
+          cex = 0.6,
+          main = "rarecurve()")
+
+
+S_b_spring <- specnumber(species_bees_nmds_clean_noempty_spring)
+raremax_b_spring <- min(rowSums(species_bees_nmds_clean_noempty_spring))
+Srare_b_spring <- rarefy(species_bees_nmds_clean_noempty_spring, raremax_b_spring)
+
+par(mfrow = c(1,2))
+plot(S_b_spring, Srare_b_spring, 
+     xlab = "Observed No. of Species", 
+     ylab = "Rarefied No. of Species",
+     main = " plot(rarefy(Bees spring, raremax))")
+abline(0, 1)
+rarecurve(species_bees_nmds_clean_noempty_spring, step = 20,
+          #sample = raremax_b_spring,
+          col = "blue",
+          cex = 0.6,
+          main = "rarecurve()")
+
+rare_bees_treetype_spring <- rownames_to_column(species_bees_nmds_clean_noempty_spring)
+colnames(rare_bees_treetype_spring)[1] <- "Treetype"
+rare_bees_treetype_spring <- rare_bees_treetype_spring %>% 
+  mutate(Treetype = str_extract(Treetype,"[BOP]"))
+rare_bees_treetype_spring$Treetype <- factor(rare_bees_treetype_spring$Treetype,
+                              levels = c("B", "O", "P"))
+rare_bees_treetype_spring <- rare_bees_treetype_spring %>% group_by(Treetype) %>% summarise_each(list(sum)) %>% column_to_rownames(., var = "Treetype")
+
+S_b_tt_spring <- specnumber(rare_bees_treetype_spring)
+raremax_b_tt_spring <- min(rowSums(rare_bees_treetype_spring)) 
+Srare_b_tt_spring <- rarefy(rare_bees_treetype_spring, raremax_b_tt_spring)
+
+par(mfrow = c(1,2))
+plot(S_b_tt_spring, Srare_b_tt_spring, 
+     xlab = "Observed No. of Species", 
+     ylab = "Rarefied No. of Species",
+     main = " plot(rarefy(Bees tree type spring, raremax))")
+abline(0, 1)
+rarecurve(rare_bees_treetype_spring, step = 20,
+          sample = raremax_b_tt_spring,
+          col = "blue",
+          cex = 0.6,
+          main = "rarecurve()")
+
+S_b_summer <- specnumber(species_bees_nmds_clean_noempty_summer)
+raremax_b_summer <- min(rowSums(species_bees_nmds_clean_noempty_summer))
+Srare_b_summer <- rarefy(species_bees_nmds_clean_noempty_summer, raremax_b_summer)
+
+par(mfrow = c(1,2))
+plot(S_b_summer, Srare_b_summer, 
+     xlab = "Observed No. of Species", 
+     ylab = "Rarefied No. of Species",
+     main = " plot(rarefy(Bees summer, raremax))")
+abline(0, 1)
+rarecurve(species_bees_nmds_clean_noempty_summer, step = 20,
+          #sample = raremax_b_summer,
+          col = "blue",
+          cex = 0.6,
+          main = "rarecurve()")
+
+rare_bees_treetype_summer <- rownames_to_column(species_bees_nmds_clean_noempty_summer)
+colnames(rare_bees_treetype_summer)[1] <- "Treetype"
+rare_bees_treetype_summer <- rare_bees_treetype_summer %>% 
+  mutate(Treetype = str_extract(Treetype,"[BOP]"))
+rare_bees_treetype_summer$Treetype <- factor(rare_bees_treetype_summer$Treetype,
+                              levels = c("B", "O", "P"))
+rare_bees_treetype_summer <- rare_bees_treetype_summer %>% group_by(Treetype) %>% summarise_each(list(sum)) %>% column_to_rownames(., var = "Treetype")
+
+S_b_tt_summer <- specnumber(rare_bees_treetype_summer)
+raremax_b_tt_summer <- min(rowSums(rare_bees_treetype_summer)) 
+Srare_b_tt_summer <- rarefy(rare_bees_treetype_summer, raremax_b_tt_summer)
+
+par(mfrow = c(1,2))
+plot(S_b_tt_summer, Srare_b_tt_summer, 
+     xlab = "Observed No. of Species", 
+     ylab = "Rarefied No. of Species",
+     main = " plot(rarefy(Bees tree type summer, raremax))")
+abline(0, 1)
+rarecurve(rare_bees_treetype_summer, step = 20,
+          sample = raremax_b_tt_summer,
+          col = "blue",
+          cex = 0.6,
+          main = "rarecurve()")
+
+#-----------------------------------------------------
+#Syrphids
+
+S_s <- specnumber(species_syrphids_nmds_clean_noempty)
+raremax_s <- min(rowSums(species_syrphids_nmds_clean_noempty))
+Srare_s <- rarefy(species_syrphids_nmds_clean_noempty, raremax_s)
+
+# #Steven: aantallen per soort over alle bossen + sample size gelijk aan totaal aantal gevangen zweefvliegen
+# comm_s <- colSums(species_syrphids_nmds_clean_noempty)
+# raremax_s <- 184 #totaal aantal zweefvliegen
+# Srare_s <- rarefy(comm_s, raremax_s)
+# rarecurve(matrix(comm_s, nrow = 1), step = 1, sample = raremax_s, cex = 0.6)+ geom_text(title("Syrphids"))
+
+par(mfrow = c(1,2))
+plot(S_s, Srare_s, 
+     xlab = "Observed No. of Species", 
+     ylab = "Rarefied No. of Species",
+     main = " plot(rarefy(Syrphids, raremax))")
+abline(0, 1)
+rarecurve(species_syrphids_nmds_clean_noempty, step = 20,
+          sample = raremax_s,
+          col = "blue",
+          cex = 0.6,
+          main = "rarecurve()")
+
+rare_syrphids_treetype <- rownames_to_column(species_syrphids_nmds_clean_noempty)
+colnames(rare_syrphids_treetype)[1] <- "Treetype"
+rare_syrphids_treetype <- rare_syrphids_treetype %>% 
+  mutate(Treetype = str_extract(Treetype,"[BOP]"))
+rare_syrphids_treetype$Treetype <- factor(rare_syrphids_treetype$Treetype,
+                              levels = c("B", "O", "P"))
+rare_syrphids_treetype <- rare_syrphids_treetype %>% group_by(Treetype) %>% summarise_each(list(sum)) %>% column_to_rownames(., var = "Treetype")
+
+S_s_tt <- specnumber(rare_syrphids_treetype)
+raremax_s_tt <- min(rowSums(rare_syrphids_treetype)) 
+Srare_s_tt <- rarefy(rare_syrphids_treetype, raremax_b_tt)
+
+par(mfrow = c(1,2))
+plot(S_s_tt, Srare_s_tt, 
+     xlab = "Observed No. of Species", 
+     ylab = "Rarefied No. of Species",
+     main = " plot(rarefy(Bees tree type summer, raremax))")
+abline(0, 1)
+rarecurve(rare_syrphids_treetype, step = 20,
+          sample = raremax_s_tt,
+          col = "blue",
+          cex = 0.6,
+          main = "rarecurve()")
+
+S_s_spring <- specnumber(species_syrphids_nmds_clean_noempty_spring)
+raremax_s_spring <- min(rowSums(species_syrphids_nmds_clean_noempty_spring))
+Srare_s_spring <- rarefy(species_syrphids_nmds_clean_noempty_spring, raremax_s_spring)
+
+par(mfrow = c(1,2))
+plot(S_s_spring, Srare_s_spring, 
+     xlab = "Observed No. of Species", 
+     ylab = "Rarefied No. of Species",
+     main = " plot(rarefy(Syrphids spring, raremax))")
+abline(0, 1)
+rarecurve(species_syrphids_nmds_clean_noempty_spring, step = 20,
+          #sample = raremax_s_spring,
+          col = "blue",
+          cex = 0.6,
+          main = "rarecurve()")
+
+rare_syrphids_treetype_spring <- rownames_to_column(species_syrphids_nmds_clean_noempty_spring)
+colnames(rare_syrphids_treetype_spring)[1] <- "Treetype"
+rare_syrphids_treetype_spring <- rare_syrphids_treetype_spring %>% 
+  mutate(Treetype = str_extract(Treetype,"[BOP]"))
+rare_syrphids_treetype_spring$Treetype <- factor(rare_syrphids_treetype_spring$Treetype,
+                              levels = c("B", "O", "P"))
+rare_syrphids_treetype_spring <- rare_syrphids_treetype_spring %>% group_by(Treetype) %>% summarise_each(list(sum)) %>% column_to_rownames(., var = "Treetype")
+
+S_s_tt_spring <- specnumber(rare_syrphids_treetype_spring)
+raremax_s_tt_spring <- min(rowSums(rare_syrphids_treetype_spring)) 
+Srare_s_tt_spring <- rarefy(rare_syrphids_treetype_spring, raremax_s_tt_spring)
+
+par(mfrow = c(1,2))
+plot(S_s_tt_spring, Srare_s_tt_spring, 
+     xlab = "Observed No. of Species", 
+     ylab = "Rarefied No. of Species",
+     main = " plot(rarefy(Syrphids tree type spring, raremax))")
+abline(0, 1)
+rarecurve(rare_syrphids_treetype_spring, step = 20,
+          sample = raremax_s_tt_spring,
+          col = "blue",
+          cex = 0.6,
+          main = "rarecurve()")
+
+S_s_summer <- specnumber(species_syrphids_nmds_clean_noempty_summer)
+raremax_s_summer <- min(rowSums(species_syrphids_nmds_clean_noempty_summer))
+Srare_s_summer <- rarefy(species_syrphids_nmds_clean_noempty_summer, raremax_s_summer)
+
+par(mfrow = c(1,2))
+plot(S_s_summer, Srare_s_summer, 
+     xlab = "Observed No. of Species", 
+     ylab = "Rarefied No. of Species",
+     main = " plot(rarefy(Syrphids summer, raremax))")
+abline(0, 1)
+rarecurve(species_syrphids_nmds_clean_noempty_summer, step = 20,
+          #sample = raremax_s_summer,
+          col = "blue",
+          cex = 0.6,
+          main = "rarecurve()")
+
+rare_syrphids_treetype_summer <- rownames_to_column(species_syrphids_nmds_clean_noempty_summer)
+colnames(rare_syrphids_treetype_summer)[1] <- "Treetype"
+rare_syrphids_treetype_summer <- rare_syrphids_treetype_summer %>% 
+  mutate(Treetype = str_extract(Treetype,"[BOP]"))
+rare_syrphids_treetype_summer$Treetype <- factor(rare_syrphids_treetype_summer$Treetype,
+                              levels = c("B", "O", "P"))
+rare_syrphids_treetype_summer <- rare_syrphids_treetype_summer %>% group_by(Treetype) %>% summarise_each(list(sum)) %>% column_to_rownames(., var = "Treetype")
+
+S_s_tt_summer <- specnumber(rare_syrphids_treetype_summer)
+raremax_s_tt_summer <- min(rowSums(rare_syrphids_treetype_summer)) 
+Srare_s_tt_summer <- rarefy(rare_syrphids_treetype_summer, raremax_s_tt_summer)
+
+par(mfrow = c(1,2))
+plot(S_s_tt_summer, Srare_s_tt_summer, 
+     xlab = "Observed No. of Species", 
+     ylab = "Rarefied No. of Species",
+     main = " plot(rarefy(Syrphids tree type summer, raremax))")
+abline(0, 1)
+rarecurve(rare_syrphids_treetype_summer, step = 20,
+          sample = raremax_s_tt_summer,
+          col = "blue",
+          cex = 0.6,
+          main = "rarecurve()")
+
+#-----------------------------------------------------
+#Pollinator
+
+S_p <- specnumber(species_pollinator_nmds_clean_noempty)
+raremax_p <- min(rowSums(species_pollinator_nmds_clean_noempty))
+Srare_p <- rarefy(species_pollinator_nmds_clean_noempty, raremax_p)
+
+par(mfrow = c(1,2))
+plot(S_p, Srare_p, 
+     xlab = "Observed No. of Species", 
+     ylab = "Rarefied No. of Species",
+     main = " plot(rarefy(Pollinators, raremax))")
+abline(0, 1)
+rarecurve(species_pollinator_nmds_clean_noempty, step = 20,
+          sample = raremax_p,
+          col = "blue",
+          cex = 0.6,
+          main = "rarecurve()")
+
+rare_pollinator_treetype <- rownames_to_column(species_pollinator_nmds_clean_noempty)
+colnames(rare_pollinator_treetype)[1] <- "Treetype"
+rare_pollinator_treetype <- rare_pollinator_treetype %>% 
+  mutate(Treetype = str_extract(Treetype,"[BOP]"))
+rare_pollinator_treetype$Treetype <- factor(rare_pollinator_treetype$Treetype,
+                              levels = c("B", "O", "P"))
+rare_pollinator_treetype <- rare_pollinator_treetype %>% group_by(Treetype) %>% summarise_each(list(sum)) %>% column_to_rownames(., var = "Treetype")
+
+S_p_tt <- specnumber(rare_pollinator_treetype)
+raremax_p_tt <- min(rowSums(rare_pollinator_treetype)) 
+Srare_p_tt <- rarefy(rare_pollinator_treetype, raremax_p_tt)
+
+par(mfrow = c(1,2))
+plot(S_p_tt, Srare_p_tt, 
+     xlab = "Observed No. of Species", 
+     ylab = "Rarefied No. of Species",
+     main = " plot(rarefy(Pollinator tree type summer, raremax))")
+abline(0, 1)
+rarecurve(rare_pollinator_treetype, step = 20,
+          sample = raremax_p_tt,
+          col = "blue",
+          cex = 0.6,
+          main = "rarecurve()")
+
+S_p_spring <- specnumber(species_pollinator_nmds_clean_noempty_spring)
+raremax_p_spring <- min(rowSums(species_pollinator_nmds_clean_noempty_spring))
+Srare_p_spring <- rarefy(species_pollinator_nmds_clean_noempty_spring, raremax_p_spring)
+
+par(mfrow = c(1,2))
+plot(S_p_spring, Srare_p_spring, 
+     xlab = "Observed No. of Species", 
+     ylab = "Rarefied No. of Species",
+     main = " plot(rarefy(Pollinator spring, raremax))")
+abline(0, 1)
+rarecurve(species_pollinator_nmds_clean_noempty_spring, step = 20,
+          #sample = raremax_p_spring,
+          col = "blue",
+          cex = 0.6,
+          main = "rarecurve()")
+
+rare_pollinator_treetype_spring <- rownames_to_column(species_pollinator_nmds_clean_noempty_spring)
+colnames(rare_pollinator_treetype_spring)[1] <- "Treetype"
+rare_pollinator_treetype_spring <- rare_pollinator_treetype_spring %>% 
+  mutate(Treetype = str_extract(Treetype,"[BOP]"))
+rare_pollinator_treetype_spring$Treetype <- factor(rare_pollinator_treetype_spring$Treetype,
+                              levels = c("B", "O", "P"))
+rare_pollinator_treetype_spring <- rare_pollinator_treetype_spring %>% group_by(Treetype) %>% summarise_each(list(sum)) %>% column_to_rownames(., var = "Treetype")
+
+S_p_tt_spring <- specnumber(rare_pollinator_treetype_spring)
+raremax_p_tt_spring <- min(rowSums(rare_pollinator_treetype_spring)) 
+Srare_p_tt_spring <- rarefy(rare_pollinator_treetype_spring, raremax_p_tt_spring)
+
+par(mfrow = c(1,2))
+plot(S_p_tt_spring, Srare_p_tt_spring, 
+     xlab = "Observed No. of Species", 
+     ylab = "Rarefied No. of Species",
+     main = " plot(rarefy(Syrphids tree type spring, raremax))")
+abline(0, 1)
+rarecurve(rare_pollinator_treetype_spring, step = 20,
+          sample = raremax_p_tt_spring,
+          col = "blue",
+          cex = 0.6,
+          main = "rarecurve()")
+
+S_p_summer <- specnumber(species_pollinator_nmds_clean_noempty_summer)
+raremax_p_summer <- min(rowSums(species_pollinator_nmds_clean_noempty_summer))
+Srare_p_summer <- rarefy(species_pollinator_nmds_clean_noempty_summer, raremax_p_summer)
+
+par(mfrow = c(1,2))
+plot(S_p_summer, Srare_p_summer, 
+     xlab = "Observed No. of Species", 
+     ylab = "Rarefied No. of Species",
+     main = " plot(rarefy(Pollinator summer, raremax))")
+abline(0, 1)
+rarecurve(species_pollinator_nmds_clean_noempty_summer, step = 20,
+          #sample = raremax_p_summer,
+          col = "blue",
+          cex = 0.6,
+          main = "rarecurve()")
+
+rare_pollinator_treetype_summer <- rownames_to_column(species_pollinator_nmds_clean_noempty_summer)
+colnames(rare_pollinator_treetype_summer)[1] <- "Treetype"
+rare_pollinator_treetype_summer <- rare_pollinator_treetype_summer %>% 
+  mutate(Treetype = str_extract(Treetype,"[BOP]"))
+rare_pollinator_treetype_summer$Treetype <- factor(rare_pollinator_treetype_summer$Treetype,
+                              levels = c("B", "O", "P"))
+rare_pollinator_treetype_summer <- rare_pollinator_treetype_summer %>% group_by(Treetype) %>% summarise_each(list(sum)) %>% column_to_rownames(., var = "Treetype")
+
+S_p_tt_summer <- specnumber(rare_pollinator_treetype_summer)
+raremax_p_tt_summer <- min(rowSums(rare_pollinator_treetype_summer)) 
+Srare_p_tt_summer <- rarefy(rare_pollinator_treetype_summer, raremax_p_tt_summer)
+
+par(mfrow = c(1,2))
+plot(S_p_tt_summer, Srare_p_tt_summer, 
+     xlab = "Observed No. of Species", 
+     ylab = "Rarefied No. of Species",
+     main = " plot(rarefy(Pollinator tree type summer, raremax))")
+abline(0, 1)
+rarecurve(rare_pollinator_treetype_summer, step = 20,
+          sample = raremax_p_tt_summer,
+          col = "blue",
+          cex = 0.6,
+          main = "rarecurve()")
+
+#Steven: aantallen per soort over alle bossen + sample size gelijk aan totaal aantal gevangen zweefvliegen
+# comm_p <- colSums(species_pollinator_nmds_clean_noempty)
+# raremax_p <- 580 #totaal aantal pollinatoren
+# Srare_p <- rarefy(comm_p, raremax_p)
+# rarecurve(matrix(comm_p, nrow = 1), step = 1, sample = raremax_p, cex = 0.6)+ geom_text(title("Pollinators"))
 ```
