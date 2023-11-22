@@ -1,0 +1,214 @@
+---
+title: "FORESTER: final analysis and figures"
+knit: (function(input_file, encoding) {
+    out_dir <- 'docs';
+    rmarkdown::render(input_file,
+      encoding=encoding,
+      output_file=file.path(dirname(input_file), out_dir, 'index.html'))})
+author: "Wim De Schuyter"
+date: "2023-11-08"
+output: html_document
+---
+
+```{r setup, include=FALSE, echo = FALSE, warning=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(tidyr)
+library(dplyr)
+library(ggplot2)
+library(readr)
+library(codebookr)
+library(Hmisc)
+library(xlsx)
+library(ggpubr)
+library(corrplot)
+library(car)
+library(MASS)
+library(indicspecies)
+library(stringr)
+library(tibble) 
+library(ape)
+library(vegan)
+library(lme4)
+library(lmerTest)
+library(modelsummary)
+
+load("workspace_test.RData")
+```
+
+Run FORESTER.Rmd first to get all necessary data and variables.
+
+# Modellen (GLM's)
+
+```{r Modellen, echo=FALSE, warning=FALSE, message=FALSE}
+
+
+
+```
+
+
+# Multivariate analysis: NMDS
+
+## Community composition based on structural complexity of the forest patches
+
+```{r NMDS treetype, echo=FALSE, warning=FALSE, message=FALSE}
+
+ggplot() +
+  stat_ellipse(data = bees_MDS_xy, geom = "polygon", aes(MDS1, MDS2, 
+                                                    color = SCI, 
+                                                    fill = SCI), alpha = 0.3) +
+  geom_point(data = bees_data_scores, aes(x = NMDS1, y = NMDS2, 
+                                     shape = SCI, color = SCI),
+             size = 2) +
+  scale_fill_manual(values = c("#56B4E9", "#CC79A7", "#E69F00"),
+                    name = "Stuctural Complexity",
+                    labels = c("Low", "Medium", "High")) +
+  scale_color_manual(values = c("#56B4E9", "#CC79A7", "#E69F00"),
+                     name = "Stuctural Complexity",
+                    labels = c("Low", "Medium", "High")) +
+  scale_shape_manual(values = c(15, 16, 17),
+                    name = "Stuctural Complexity",
+                    labels = c("Low", "Medium", "High")) +
+  annotate(geom = "label", x = -1, y = 2, size = 4,
+           label = paste("Stress: ", round(bees_nmds_results$stress, digits = 3))) +
+  geom_text(data = bees_species_scores, aes(x = NMDS1, y = NMDS2, label = Species),
+            alpha = 0.5, size = 1.5) +
+  theme_minimal() +
+  theme(text = element_text(size = 12),
+        panel.border = element_blank(), 
+        panel.grid.major = element_blank(),
+        panel.grid.minor = element_blank(), 
+        axis.line = element_line(colour = "darkgrey"))+
+  ggtitle("NMDS bees by structural complexity")+
+  theme(plot.title = element_text(hjust = 0.5))
+
+ggplot() +
+  stat_ellipse(data = syrphids_MDS_xy, geom = "polygon", aes(MDS1, MDS2, 
+                                                    color = SCI, 
+                                                    fill = SCI), alpha = 0.3) +
+  geom_point(data = syrphids_data_scores, aes(x = NMDS1, y = NMDS2, 
+                                     shape = SCI, color = SCI),
+             size = 2) +
+  scale_fill_manual(values = c("#56B4E9", "#CC79A7", "#E69F00"),
+                    name = "Stuctural Complexity",
+                    labels = c("Low", "Medium", "High")) +
+  scale_color_manual(values = c("#56B4E9", "#CC79A7", "#E69F00"),
+                     name = "Stuctural Complexity",
+                    labels = c("Low", "Medium", "High")) +
+  scale_shape_manual(values = c(15, 16, 17),
+                    name = "Stuctural Complexity",
+                    labels = c("Low", "Medium", "High")) +
+  annotate(geom = "label", x = -1, y = 2, size = 4,
+           label = paste("Stress: ", round(syrphids_nmds_results$stress, digits = 3))) +
+  geom_text(data = syrphids_species_scores, aes(x = NMDS1, y = NMDS2, label = Species),
+            alpha = 0.5, size = 1.5) +
+  theme_minimal() +
+  theme(text = element_text(size = 12),
+        panel.border = element_blank(), 
+        panel.grid.major = element_blank(),
+        panel.grid.minor = element_blank(), 
+        axis.line = element_line(colour = "darkgrey"))+
+  ggtitle("NMDS syrphids by structural complexity")+
+  theme(plot.title = element_text(hjust = 0.5))
+
+```
+### Permanova NMDS structural complexity
+
+```{r Permanova NMDS SCI, echo=FALSE, warning=FALSE, message=FALSE}
+
+### Testen clustering
+SCI_bees = as.factor(bees_MDS_xy$SCI)
+# berekenen van de dissimilariteiten voor de verschillende plots/sites/KLE's
+dissim_SCI_bees <-vegdist(bees_MDS_xy[,c(2,3)], binary=F, method="bray", diag=T, upper=T)
+adonis2(dissim_SCI_bees ~ SCI_bees, permutations=999, method="bray")
+# bepaal of de divlevels significant verschillen van elkaar
+bdis_SCI_bees = betadisper(dissim_SCI_bees, SCI_bees)
+anova(bdis_SCI_bees)
+
+SCI_syrphids = as.factor(syrphids_MDS_xy$SCI)
+dissim_SCI_syrphids <-vegdist(syrphids_MDS_xy[,c(2,3)], binary=F, method="bray", diag=T, upper=T)
+adonis2(dissim_SCI_syrphids ~ SCI_syrphids, permutations=999, method="bray")
+bdis_SCI_syrphids = betadisper(dissim_SCI_syrphids, SCI_syrphids)
+anova(bdis_SCI_syrphids)
+
+```
+
+
+## Community composition based on dominant tree species of the forest patches
+
+```{r NMDS SCI, echo=FALSE, warning=FALSE, message=FALSE}
+
+ggplot() +
+  stat_ellipse(data = bees_MDS_xy, geom = "polygon", aes(MDS1, MDS2, 
+                                                    color = Treetype, 
+                                                    fill = Treetype), alpha = 0.3) +
+  geom_point(data = bees_data_scores, aes(x = NMDS1, y = NMDS2, 
+                                     shape = Treetype, color = Treetype),
+             size = 2) +
+  scale_fill_manual(values = c("#D55E00", "#F0E442", "#009E73"),
+                    name = "Dominant tree species",
+                    labels = c("Beech", "Oak", "Poplar")) +
+  scale_color_manual(values = c("#D55E00", "#F0E442", "#009E73"),
+                     name = "Dominant tree species",
+                    labels = c("Beech", "Oak", "Poplar")) +
+  scale_shape_manual(values = c(15, 16, 17),
+                     name = "Dominant tree species",
+                    labels = c("Beech", "Oak", "Poplar")) +
+  annotate(geom = "label", x = -1, y = 2, size = 4,
+           label = paste("Stress: ", round(bees_nmds_results$stress, digits = 3))) +
+  geom_text(data = bees_species_scores, aes(x = NMDS1, y = NMDS2, label = Species),
+            alpha = 0.5, size = 1.5) +
+  theme_minimal() +
+  theme(text = element_text(size = 12),
+        panel.border = element_blank(), 
+        panel.grid.major = element_blank(),
+        panel.grid.minor = element_blank(), 
+        axis.line = element_line(colour = "darkgrey"))+
+  ggtitle("NMDS bees by dominant tree species")+
+  theme(plot.title = element_text(hjust = 0.5))
+
+ggplot() +
+  stat_ellipse(data = syrphids_MDS_xy, geom = "polygon", aes(MDS1, MDS2, 
+                                                    color = Treetype, 
+                                                    fill = Treetype), alpha = 0.3) +
+  geom_point(data = syrphids_data_scores, aes(x = NMDS1, y = NMDS2, 
+                                     shape = Treetype, color = Treetype),
+             size = 2) +
+  scale_fill_manual(values = c("#D55E00", "#F0E442", "#009E73"),
+                    name = "Dominant tree species",
+                    labels = c("Beech", "Oak", "Poplar")) +
+  scale_color_manual(values = c("#D55E00", "#F0E442", "#009E73"),
+                     name = "Dominant tree species",
+                    labels = c("Beech", "Oak", "Poplar")) +
+  scale_shape_manual(values = c(15, 16, 17),
+                     name = "Dominant tree species",
+                    labels = c("Beech", "Oak", "Poplar")) +
+  annotate(geom = "label", x = -1, y = 2, size = 4,
+           label = paste("Stress: ", round(syrphids_nmds_results$stress, digits = 3))) +
+  geom_text(data = syrphids_species_scores, aes(x = NMDS1, y = NMDS2, label = Species),
+            alpha = 0.5, size = 1.5) +
+  theme_minimal() +
+  theme(text = element_text(size = 12),
+        panel.border = element_blank(), 
+        panel.grid.major = element_blank(),
+        panel.grid.minor = element_blank(), 
+        axis.line = element_line(colour = "darkgrey"))+
+  ggtitle("NMDS syrphids by dominant tree species")+
+  theme(plot.title = element_text(hjust = 0.5)) 
+
+```
+
+```{r Permanova NMDS Treetype, echo=FALSE, warning=FALSE, message=FALSE}
+
+Treetype_bees = as.factor(bees_MDS_xy$Treetype)
+dissim_Treetype_bees <-vegdist(bees_MDS_xy[,c(2,3)], binary=F, method="bray", diag=T, upper=T)
+adonis2(dissim_Treetype_bees ~ Treetype_bees, permutations=999, method="bray")
+bdis_Treetype_bees = betadisper(dissim_Treetype_bees, Treetype_bees)
+anova(bdis_Treetype_bees)
+
+Treetype_syrphids = as.factor(syrphids_MDS_xy$Treetype)
+dissim_Treetype_syrphids <-vegdist(syrphids_MDS_xy[,c(2,3)], binary=F, method="bray", diag=T, upper=T)
+adonis2(dissim_Treetype_syrphids ~ Treetype_syrphids, permutations=999, method="bray")
+bdis_Treetype_syrphids = betadisper(dissim_Treetype_syrphids, Treetype_syrphids)
+anova(bdis_Treetype_syrphids)
+
+```
