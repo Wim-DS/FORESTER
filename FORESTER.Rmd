@@ -453,6 +453,75 @@ ggplot(data = b_richness, aes(x = Session,
   ggtitle("Boxplot bees richness")
 ```
 
+```{r rarefaction iNEXT, echo=FALSE, warning=FALSE, message=FALSE}
+
+## install iNEXT package from CRAN
+install.packages("iNEXT")
+## import packages
+library(iNEXT)
+
+library(iNEXT)
+library(tidyverse)
+ 
+#example---------------------------------------------------------------------------
+data(bird)
+str(bird)
+ 
+out <- iNEXT(bird, q = 0, datatype = 'abundance') #q=0, want we willen species richness, geen diversity maat
+out
+ 
+out1 <- iNEXT(bird, q=0, datatype="abundance")
+ggiNEXT(x=out1, type=1)
+ 
+chao <- ChaoRichness(bird, datatype = "abundance", conf = 0.95) |> #chao estimates berekenen, hieraan kan dan andere variabelen zoals SCI toegevoegd worden met left_join
+  rownames_to_column()
+ 
+ggplot(chao, aes(rowname, Estimator)) + #chao estimates visualiseren
+  geom_point() +
+  geom_errorbar(aes(ymin = `95% Lower`,ymax = `95% Upper`)) +
+  scale_y_continuous(limits = c(0,60)) +
+  theme_classic()
+
+# BEES ---------------------------------------------------------------------------
+b_ab_rarefaction <- bees %>% pivot_wider(names_from = "Location", values_from = "Count") %>% 
+  mutate(across(everything(), replace_na, 0)) %>% 
+  group_by(Species) %>% 
+  summarise_if(is.numeric, sum, na.rm = TRUE) %>% 
+  dplyr::select(-Trap, -Session) %>% 
+  column_to_rownames(., "Species")
+
+b_out <- iNEXT(b_ab_rarefaction, q = 0, datatype = 'abundance')
+b_out
+
+b_chao <- ChaoRichness(b_ab_rarefaction, datatype = "abundance", conf = 0.95) %>% rownames_to_column(var = "Location") %>% 
+  rename(b_estimator = "Estimator", b_observed = "Observed", b_est_se = "Est_s.e.", b_est_lower = "95% Lower", b_est_upper = "95% Upper")
+
+ggplot(b_chao, aes(Location, b_estimator)) + #chao estimates visualiseren
+  geom_point() +
+  geom_errorbar(aes(ymin = b_est_lower, ymax = b_est_upper)) +
+  theme_classic()
+
+# SYRPHIDS -----------------------------------------------------------------------
+
+s_ab_rarefaction <- syrphids %>% pivot_wider(names_from = "Location", values_from = "Count") %>% 
+  mutate(across(everything(), replace_na, 0)) %>% 
+  group_by(Species) %>% 
+  summarise_if(is.numeric, sum, na.rm = TRUE) %>% 
+  dplyr::select(-Trap, -Session) %>% 
+  column_to_rownames(., "Species")
+
+s_out <- iNEXT(s_ab_rarefaction, q = 0, datatype = 'abundance')
+s_out
+
+s_chao <- ChaoRichness(s_ab_rarefaction, datatype = "abundance", conf = 0.95) %>% rownames_to_column(var = "Location")%>% 
+  rename(s_estimator = "Estimator", s_observed = "Observed", s_est_se = "Est_s.e.", s_est_lower = "95% Lower", s_est_upper = "95% Upper")
+
+ggplot(s_chao, aes(Location, s_estimator)) + #chao estimates visualiseren
+  geom_point() +
+  geom_errorbar(aes(ymin = s_est_lower, ymax = s_est_upper)) +
+  theme_classic()
+
+```
 
 ```{r Data exploration, echo=FALSE, warning=FALSE, message=FALSE, results='hide'}
 bees_variables <- b_abundance %>% 
@@ -543,12 +612,16 @@ Coverdata <- read.csv("Coverdata.csv")
 Bestuivers_master <- bees_variables %>% 
   left_join(., syrphids_variables, by = c("Location", "Session", "Treetype")) %>% 
   mutate(best_AB = b_AB + s_AB, best_SR = b_SR + s_SR) %>% 
+  mutate(Session = as.numeric(Session)) %>% 
+  mutate(Treetype = as.character(Treetype)) %>% 
   left_join(., flowerdata, by = c("Location", "Session", "Treetype")) %>% 
   mutate(Session = as.numeric(Session)) %>% 
   mutate(Treetype = as.character(Treetype)) %>% 
   left_join(., SCI_table, by = c("Location", "Treetype")) %>% 
   mutate(SCI_discrete = as.factor(ifelse(SCI > 0.52, "high", ifelse(SCI < 0.35, "low", "medium")))) %>% #gelijke klassen tussen min en max (tss 0.18 en 0.69, grootte is 0.17)
-  left_join(., Coverdata, by = "Location")
+  left_join(., Coverdata, by = "Location") %>% 
+  left_join(., b_chao , by = "Location") %>% 
+  left_join(., s_chao , by = "Location")
 
 # max(Bestuivers_master$SCI) #0.69
 # min(Bestuivers_master$SCI) #0.18
@@ -567,7 +640,9 @@ Bestuivers_master_pool <- bees_variables_pool %>%
   left_join(., SCI_table, by = c("Location", "Treetype")) %>% 
   mutate(SCI_discrete = as.factor(ifelse(SCI > 0.52, "high", ifelse(SCI < 0.35, "low", "medium")))) %>%
   left_join(., Coverdata, by = "Location") %>% 
-  left_join(., flowerdata_pool, by = c("Location","Treetype"))
+  left_join(., flowerdata_pool, by = c("Location","Treetype"))%>% 
+  left_join(., b_chao , by = "Location") %>% 
+  left_join(., s_chao , by = "Location")
 
 Bestuivers_master_pool_spring <- bees_variables_pool_spring %>% 
   left_join(., syrphids_variables_pool_spring, by = c("Location", "Treetype")) %>% 
@@ -576,7 +651,9 @@ Bestuivers_master_pool_spring <- bees_variables_pool_spring %>%
   left_join(., SCI_table, by = c("Location", "Treetype")) %>% 
   mutate(SCI_discrete = as.factor(ifelse(SCI > 0.52, "high", ifelse(SCI < 0.35, "low", "medium")))) %>%
   left_join(., flowerdata_pool_spring, by = c("Location","Treetype")) %>% 
-  left_join(., Coverdata, by = "Location")
+  left_join(., Coverdata, by = "Location")%>% 
+  left_join(., b_chao , by = "Location") %>% 
+  left_join(., s_chao , by = "Location")
 
 Bestuivers_master_pool_summer <- bees_variables_pool_summer %>% 
   left_join(., syrphids_variables_pool_summer, by = c("Location", "Treetype")) %>% 
@@ -585,7 +662,9 @@ Bestuivers_master_pool_summer <- bees_variables_pool_summer %>%
   left_join(., SCI_table, by = c("Location", "Treetype")) %>% 
   mutate(SCI_discrete = as.factor(ifelse(SCI > 0.52, "high", ifelse(SCI < 0.35, "low", "medium")))) %>%
   left_join(., flowerdata_pool_summer, by = c("Location","Treetype")) %>% 
-  left_join(., Coverdata, by = "Location")
+  left_join(., Coverdata, by = "Location")%>% 
+  left_join(., b_chao , by = "Location") %>% 
+  left_join(., s_chao , by = "Location")
   
 
 source("HighstatLibV10.R")
@@ -1290,6 +1369,9 @@ plotSR_ImageCover_spring_s <- ggplot(data = Bestuivers_master_spring, aes(x = s_
 plotSR_ImageCover_summer_s <- ggplot(data = Bestuivers_master_summer, aes(x = s_SR, y = ImageCover, fill = Treetype, colour = Treetype)) + geom_point() + geom_smooth(method = "lm") + theme(axis.title = element_blank())
 ggarrange(plotSR_ImageCover_s, plotSR_ImageCover_spring_s, plotSR_ImageCover_summer_s, labels = c("overall", "spring", "summer"), nrow = 1, common.legend = TRUE, legend = "bottom")%>% 
   annotate_figure(., top = text_grob("Syrphid richness vs image cover"))
+
+ggplot(Bestuivers_master_pool, aes(x = SCI, y = b_estimator, fill = Treetype, colour = Treetype)) + geom_point() + geom_smooth(method = "lm")
+  
 
 ```
 
@@ -2845,399 +2927,400 @@ bdis
 
 ## Rarefaction curves
 ```{r rarefaction, echo=FALSE, warning=FALSE, message=FALSE}
-
-#Bees
-
-rare_bees_treetype <- rownames_to_column(species_bees_nmds_clean_noempty)
-colnames(rare_bees_treetype)[1] <- "Treetype"
-rare_bees_treetype <- rare_bees_treetype %>% 
-  mutate(Treetype = str_extract(Treetype,"[BOP]"))
-rare_bees_treetype$Treetype <- factor(rare_bees_treetype$Treetype,
-                              levels = c("B", "O", "P"))
-rare_bees_treetype <- rare_bees_treetype %>% group_by(Treetype) %>% summarise_each(list(sum)) %>% column_to_rownames(., var = "Treetype")
-
-#total number of species at each site (row of data)
-S_b <- specnumber(species_bees_nmds_clean_noempty)
-S_b_tt <- specnumber(rare_bees_treetype)
-
-# Number of INDIVIDULS per site (?)
-raremax_b <- min(rowSums(species_bees_nmds_clean_noempty)) # = 4; 
-raremax_b_tt <- min(rowSums(rare_bees_treetype)) 
-
-# rarefy, w/ raremax as input (?)
-Srare_b <- rarefy(species_bees_nmds_clean_noempty, raremax_b)
-Srare_b_tt <- rarefy(rare_bees_treetype, raremax_b_tt)
-
-# #Steven: aantallen per soort over alle bossen + sample size gelijk aan totaal aantal gevangen bijen
-# comm_b <- colSums(species_bees_nmds_clean_noempty)
-# raremax_b <- 369 #totaal aantal bijen?
-# Srare_b <- rarefy(comm_b, raremax_b)
-# rarecurve(matrix(comm_b, nrow = 1), step = 1, sample = raremax_b, cex = 0.6)+ geom_text(title("Bees"))
-
-#Plot rarefaction results
-par(mfrow = c(1,2))
-plot(S_b, Srare_b, 
-     xlab = "Observed No. of Species", 
-     ylab = "Rarefied No. of Species",
-     main = " plot(rarefy(Bees, raremax))")
-abline(0, 1)
-rarecurve(species_bees_nmds_clean_noempty, step = 20,
-          sample = raremax_b,
-          col = "blue",
-          cex = 0.6,
-          main = "rarecurve()")
-
-par(mfrow = c(1,2))
-plot(S_b_tt, Srare_b_tt, 
-     xlab = "Observed No. of Species", 
-     ylab = "Rarefied No. of Species",
-     main = " plot(rarefy(Bees tree type, raremax))")
-abline(0, 1)
-rarecurve(rare_bees_treetype, step = 20,
-          sample = raremax_b_tt,
-          col = "blue",
-          cex = 0.6,
-          main = "rarecurve()")
-
-
-S_b_spring <- specnumber(species_bees_nmds_clean_noempty_spring)
-raremax_b_spring <- min(rowSums(species_bees_nmds_clean_noempty_spring))
-Srare_b_spring <- rarefy(species_bees_nmds_clean_noempty_spring, raremax_b_spring)
-
-par(mfrow = c(1,2))
-plot(S_b_spring, Srare_b_spring, 
-     xlab = "Observed No. of Species", 
-     ylab = "Rarefied No. of Species",
-     main = " plot(rarefy(Bees spring, raremax))")
-abline(0, 1)
-rarecurve(species_bees_nmds_clean_noempty_spring, step = 20,
-          #sample = raremax_b_spring,
-          col = "blue",
-          cex = 0.6,
-          main = "rarecurve()")
-
-rare_bees_treetype_spring <- rownames_to_column(species_bees_nmds_clean_noempty_spring)
-colnames(rare_bees_treetype_spring)[1] <- "Treetype"
-rare_bees_treetype_spring <- rare_bees_treetype_spring %>% 
-  mutate(Treetype = str_extract(Treetype,"[BOP]"))
-rare_bees_treetype_spring$Treetype <- factor(rare_bees_treetype_spring$Treetype,
-                              levels = c("B", "O", "P"))
-rare_bees_treetype_spring <- rare_bees_treetype_spring %>% group_by(Treetype) %>% summarise_each(list(sum)) %>% column_to_rownames(., var = "Treetype")
-
-S_b_tt_spring <- specnumber(rare_bees_treetype_spring)
-raremax_b_tt_spring <- min(rowSums(rare_bees_treetype_spring)) 
-Srare_b_tt_spring <- rarefy(rare_bees_treetype_spring, raremax_b_tt_spring)
-
-par(mfrow = c(1,2))
-plot(S_b_tt_spring, Srare_b_tt_spring, 
-     xlab = "Observed No. of Species", 
-     ylab = "Rarefied No. of Species",
-     main = " plot(rarefy(Bees tree type spring, raremax))")
-abline(0, 1)
-rarecurve(rare_bees_treetype_spring, step = 20,
-          sample = raremax_b_tt_spring,
-          col = "blue",
-          cex = 0.6,
-          main = "rarecurve()")
-
-S_b_summer <- specnumber(species_bees_nmds_clean_noempty_summer)
-raremax_b_summer <- min(rowSums(species_bees_nmds_clean_noempty_summer))
-Srare_b_summer <- rarefy(species_bees_nmds_clean_noempty_summer, raremax_b_summer)
-
-par(mfrow = c(1,2))
-plot(S_b_summer, Srare_b_summer, 
-     xlab = "Observed No. of Species", 
-     ylab = "Rarefied No. of Species",
-     main = " plot(rarefy(Bees summer, raremax))")
-abline(0, 1)
-rarecurve(species_bees_nmds_clean_noempty_summer, step = 20,
-          #sample = raremax_b_summer,
-          col = "blue",
-          cex = 0.6,
-          main = "rarecurve()")
-
-rare_bees_treetype_summer <- rownames_to_column(species_bees_nmds_clean_noempty_summer)
-colnames(rare_bees_treetype_summer)[1] <- "Treetype"
-rare_bees_treetype_summer <- rare_bees_treetype_summer %>% 
-  mutate(Treetype = str_extract(Treetype,"[BOP]"))
-rare_bees_treetype_summer$Treetype <- factor(rare_bees_treetype_summer$Treetype,
-                              levels = c("B", "O", "P"))
-rare_bees_treetype_summer <- rare_bees_treetype_summer %>% group_by(Treetype) %>% summarise_each(list(sum)) %>% column_to_rownames(., var = "Treetype")
-
-S_b_tt_summer <- specnumber(rare_bees_treetype_summer)
-raremax_b_tt_summer <- min(rowSums(rare_bees_treetype_summer)) 
-Srare_b_tt_summer <- rarefy(rare_bees_treetype_summer, raremax_b_tt_summer)
-
-par(mfrow = c(1,2))
-plot(S_b_tt_summer, Srare_b_tt_summer, 
-     xlab = "Observed No. of Species", 
-     ylab = "Rarefied No. of Species",
-     main = " plot(rarefy(Bees tree type summer, raremax))")
-abline(0, 1)
-rarecurve(rare_bees_treetype_summer, step = 20,
-          sample = raremax_b_tt_summer,
-          col = "blue",
-          cex = 0.6,
-          main = "rarecurve()")
-
-#-----------------------------------------------------
-#Syrphids
-
-S_s <- specnumber(species_syrphids_nmds_clean_noempty)
-raremax_s <- min(rowSums(species_syrphids_nmds_clean_noempty))
-Srare_s <- rarefy(species_syrphids_nmds_clean_noempty, raremax_s)
-
+# 
+# #Bees
+# 
+# rare_bees_treetype <- rownames_to_column(species_bees_nmds_clean_noempty)
+# colnames(rare_bees_treetype)[1] <- "Treetype"
+# rare_bees_treetype <- rare_bees_treetype %>% 
+#   mutate(Treetype = str_extract(Treetype,"[BOP]"))
+# rare_bees_treetype$Treetype <- factor(rare_bees_treetype$Treetype,
+#                               levels = c("B", "O", "P"))
+# rare_bees_treetype <- rare_bees_treetype %>% group_by(Treetype) %>% summarise_each(list(sum)) %>% column_to_rownames(., var = "Treetype")
+# 
+# #total number of species at each site (row of data)
+# S_b <- specnumber(species_bees_nmds_clean_noempty)
+# S_b_tt <- specnumber(rare_bees_treetype)
+# 
+# # Number of INDIVIDULS per site (?)
+# raremax_b <- min(rowSums(species_bees_nmds_clean_noempty)) # = 4; 
+# raremax_b_tt <- min(rowSums(rare_bees_treetype)) 
+# 
+# # rarefy, w/ raremax as input (?)
+# Srare_b <- rarefy(species_bees_nmds_clean_noempty, raremax_b)
+# Srare_b_tt <- rarefy(rare_bees_treetype, raremax_b_tt)
+# 
+# # #Steven: aantallen per soort over alle bossen + sample size gelijk aan totaal aantal gevangen bijen
+# # comm_b <- colSums(species_bees_nmds_clean_noempty)
+# # raremax_b <- 369 #totaal aantal bijen?
+# # Srare_b <- rarefy(comm_b, raremax_b)
+# # rarecurve(matrix(comm_b, nrow = 1), step = 1, sample = raremax_b, cex = 0.6)+ geom_text(title("Bees"))
+# 
+# #Plot rarefaction results
+# par(mfrow = c(1,2))
+# plot(S_b, Srare_b, 
+#      xlab = "Observed No. of Species", 
+#      ylab = "Rarefied No. of Species",
+#      main = " plot(rarefy(Bees, raremax))")
+# abline(0, 1)
+# rarecurve(species_bees_nmds_clean_noempty, step = 20,
+#           sample = raremax_b,
+#           col = "blue",
+#           cex = 0.6,
+#           main = "rarecurve()")
+# 
+# par(mfrow = c(1,2))
+# plot(S_b_tt, Srare_b_tt, 
+#      xlab = "Observed No. of Species", 
+#      ylab = "Rarefied No. of Species",
+#      main = " plot(rarefy(Bees tree type, raremax))")
+# abline(0, 1)
+# rarecurve(rare_bees_treetype, step = 20,
+#           sample = raremax_b_tt,
+#           col = "blue",
+#           cex = 0.6,
+#           main = "rarecurve()")
+# 
+# 
+# S_b_spring <- specnumber(species_bees_nmds_clean_noempty_spring)
+# raremax_b_spring <- min(rowSums(species_bees_nmds_clean_noempty_spring))
+# Srare_b_spring <- rarefy(species_bees_nmds_clean_noempty_spring, raremax_b_spring)
+# 
+# par(mfrow = c(1,2))
+# plot(S_b_spring, Srare_b_spring, 
+#      xlab = "Observed No. of Species", 
+#      ylab = "Rarefied No. of Species",
+#      main = " plot(rarefy(Bees spring, raremax))")
+# abline(0, 1)
+# rarecurve(species_bees_nmds_clean_noempty_spring, step = 20,
+#           #sample = raremax_b_spring,
+#           col = "blue",
+#           cex = 0.6,
+#           main = "rarecurve()")
+# 
+# rare_bees_treetype_spring <- rownames_to_column(species_bees_nmds_clean_noempty_spring)
+# colnames(rare_bees_treetype_spring)[1] <- "Treetype"
+# rare_bees_treetype_spring <- rare_bees_treetype_spring %>% 
+#   mutate(Treetype = str_extract(Treetype,"[BOP]"))
+# rare_bees_treetype_spring$Treetype <- factor(rare_bees_treetype_spring$Treetype,
+#                               levels = c("B", "O", "P"))
+# rare_bees_treetype_spring <- rare_bees_treetype_spring %>% group_by(Treetype) %>% summarise_each(list(sum)) %>% column_to_rownames(., var = "Treetype")
+# 
+# S_b_tt_spring <- specnumber(rare_bees_treetype_spring)
+# raremax_b_tt_spring <- min(rowSums(rare_bees_treetype_spring)) 
+# Srare_b_tt_spring <- rarefy(rare_bees_treetype_spring, raremax_b_tt_spring)
+# 
+# par(mfrow = c(1,2))
+# plot(S_b_tt_spring, Srare_b_tt_spring, 
+#      xlab = "Observed No. of Species", 
+#      ylab = "Rarefied No. of Species",
+#      main = " plot(rarefy(Bees tree type spring, raremax))")
+# abline(0, 1)
+# rarecurve(rare_bees_treetype_spring, step = 20,
+#           sample = raremax_b_tt_spring,
+#           col = "blue",
+#           cex = 0.6,
+#           main = "rarecurve()")
+# 
+# S_b_summer <- specnumber(species_bees_nmds_clean_noempty_summer)
+# raremax_b_summer <- min(rowSums(species_bees_nmds_clean_noempty_summer))
+# Srare_b_summer <- rarefy(species_bees_nmds_clean_noempty_summer, raremax_b_summer)
+# 
+# par(mfrow = c(1,2))
+# plot(S_b_summer, Srare_b_summer, 
+#      xlab = "Observed No. of Species", 
+#      ylab = "Rarefied No. of Species",
+#      main = " plot(rarefy(Bees summer, raremax))")
+# abline(0, 1)
+# rarecurve(species_bees_nmds_clean_noempty_summer, step = 20,
+#           #sample = raremax_b_summer,
+#           col = "blue",
+#           cex = 0.6,
+#           main = "rarecurve()")
+# 
+# rare_bees_treetype_summer <- rownames_to_column(species_bees_nmds_clean_noempty_summer)
+# colnames(rare_bees_treetype_summer)[1] <- "Treetype"
+# rare_bees_treetype_summer <- rare_bees_treetype_summer %>% 
+#   mutate(Treetype = str_extract(Treetype,"[BOP]"))
+# rare_bees_treetype_summer$Treetype <- factor(rare_bees_treetype_summer$Treetype,
+#                               levels = c("B", "O", "P"))
+# rare_bees_treetype_summer <- rare_bees_treetype_summer %>% group_by(Treetype) %>% summarise_each(list(sum)) %>% column_to_rownames(., var = "Treetype")
+# 
+# S_b_tt_summer <- specnumber(rare_bees_treetype_summer)
+# raremax_b_tt_summer <- min(rowSums(rare_bees_treetype_summer)) 
+# Srare_b_tt_summer <- rarefy(rare_bees_treetype_summer, raremax_b_tt_summer)
+# 
+# par(mfrow = c(1,2))
+# plot(S_b_tt_summer, Srare_b_tt_summer, 
+#      xlab = "Observed No. of Species", 
+#      ylab = "Rarefied No. of Species",
+#      main = " plot(rarefy(Bees tree type summer, raremax))")
+# abline(0, 1)
+# rarecurve(rare_bees_treetype_summer, step = 20,
+#           sample = raremax_b_tt_summer,
+#           col = "blue",
+#           cex = 0.6,
+#           main = "rarecurve()")
+# 
+# #-----------------------------------------------------
+# #Syrphids
+# 
+# S_s <- specnumber(species_syrphids_nmds_clean_noempty)
+# raremax_s <- min(rowSums(species_syrphids_nmds_clean_noempty))
+# Srare_s <- rarefy(species_syrphids_nmds_clean_noempty, raremax_s)
+# 
+# # #Steven: aantallen per soort over alle bossen + sample size gelijk aan totaal aantal gevangen zweefvliegen
+# # comm_s <- colSums(species_syrphids_nmds_clean_noempty)
+# # raremax_s <- 184 #totaal aantal zweefvliegen
+# # Srare_s <- rarefy(comm_s, raremax_s)
+# # rarecurve(matrix(comm_s, nrow = 1), step = 1, sample = raremax_s, cex = 0.6)+ geom_text(title("Syrphids"))
+# 
+# par(mfrow = c(1,2))
+# plot(S_s, Srare_s, 
+#      xlab = "Observed No. of Species", 
+#      ylab = "Rarefied No. of Species",
+#      main = " plot(rarefy(Syrphids, raremax))")
+# abline(0, 1)
+# rarecurve(species_syrphids_nmds_clean_noempty, step = 20,
+#           sample = raremax_s,
+#           col = "blue",
+#           cex = 0.6,
+#           main = "rarecurve()")
+# 
+# rare_syrphids_treetype <- rownames_to_column(species_syrphids_nmds_clean_noempty)
+# colnames(rare_syrphids_treetype)[1] <- "Treetype"
+# rare_syrphids_treetype <- rare_syrphids_treetype %>% 
+#   mutate(Treetype = str_extract(Treetype,"[BOP]"))
+# rare_syrphids_treetype$Treetype <- factor(rare_syrphids_treetype$Treetype,
+#                               levels = c("B", "O", "P"))
+# rare_syrphids_treetype <- rare_syrphids_treetype %>% group_by(Treetype) %>% summarise_each(list(sum)) %>% column_to_rownames(., var = "Treetype")
+# 
+# S_s_tt <- specnumber(rare_syrphids_treetype)
+# raremax_s_tt <- min(rowSums(rare_syrphids_treetype)) 
+# Srare_s_tt <- rarefy(rare_syrphids_treetype, raremax_b_tt)
+# 
+# par(mfrow = c(1,2))
+# plot(S_s_tt, Srare_s_tt, 
+#      xlab = "Observed No. of Species", 
+#      ylab = "Rarefied No. of Species",
+#      main = " plot(rarefy(Bees tree type summer, raremax))")
+# abline(0, 1)
+# rarecurve(rare_syrphids_treetype, step = 20,
+#           sample = raremax_s_tt,
+#           col = "blue",
+#           cex = 0.6,
+#           main = "rarecurve()")
+# 
+# S_s_spring <- specnumber(species_syrphids_nmds_clean_noempty_spring)
+# raremax_s_spring <- min(rowSums(species_syrphids_nmds_clean_noempty_spring))
+# Srare_s_spring <- rarefy(species_syrphids_nmds_clean_noempty_spring, raremax_s_spring)
+# 
+# par(mfrow = c(1,2))
+# plot(S_s_spring, Srare_s_spring, 
+#      xlab = "Observed No. of Species", 
+#      ylab = "Rarefied No. of Species",
+#      main = " plot(rarefy(Syrphids spring, raremax))")
+# abline(0, 1)
+# rarecurve(species_syrphids_nmds_clean_noempty_spring, step = 20,
+#           #sample = raremax_s_spring,
+#           col = "blue",
+#           cex = 0.6,
+#           main = "rarecurve()")
+# 
+# rare_syrphids_treetype_spring <- rownames_to_column(species_syrphids_nmds_clean_noempty_spring)
+# colnames(rare_syrphids_treetype_spring)[1] <- "Treetype"
+# rare_syrphids_treetype_spring <- rare_syrphids_treetype_spring %>% 
+#   mutate(Treetype = str_extract(Treetype,"[BOP]"))
+# rare_syrphids_treetype_spring$Treetype <- factor(rare_syrphids_treetype_spring$Treetype,
+#                               levels = c("B", "O", "P"))
+# rare_syrphids_treetype_spring <- rare_syrphids_treetype_spring %>% group_by(Treetype) %>% summarise_each(list(sum)) %>% column_to_rownames(., var = "Treetype")
+# 
+# S_s_tt_spring <- specnumber(rare_syrphids_treetype_spring)
+# raremax_s_tt_spring <- min(rowSums(rare_syrphids_treetype_spring)) 
+# Srare_s_tt_spring <- rarefy(rare_syrphids_treetype_spring, raremax_s_tt_spring)
+# 
+# par(mfrow = c(1,2))
+# plot(S_s_tt_spring, Srare_s_tt_spring, 
+#      xlab = "Observed No. of Species", 
+#      ylab = "Rarefied No. of Species",
+#      main = " plot(rarefy(Syrphids tree type spring, raremax))")
+# abline(0, 1)
+# rarecurve(rare_syrphids_treetype_spring, step = 20,
+#           sample = raremax_s_tt_spring,
+#           col = "blue",
+#           cex = 0.6,
+#           main = "rarecurve()")
+# 
+# S_s_summer <- specnumber(species_syrphids_nmds_clean_noempty_summer)
+# raremax_s_summer <- min(rowSums(species_syrphids_nmds_clean_noempty_summer))
+# Srare_s_summer <- rarefy(species_syrphids_nmds_clean_noempty_summer, raremax_s_summer)
+# 
+# par(mfrow = c(1,2))
+# plot(S_s_summer, Srare_s_summer, 
+#      xlab = "Observed No. of Species", 
+#      ylab = "Rarefied No. of Species",
+#      main = " plot(rarefy(Syrphids summer, raremax))")
+# abline(0, 1)
+# rarecurve(species_syrphids_nmds_clean_noempty_summer, step = 20,
+#           #sample = raremax_s_summer,
+#           col = "blue",
+#           cex = 0.6,
+#           main = "rarecurve()")
+# 
+# rare_syrphids_treetype_summer <- rownames_to_column(species_syrphids_nmds_clean_noempty_summer)
+# colnames(rare_syrphids_treetype_summer)[1] <- "Treetype"
+# rare_syrphids_treetype_summer <- rare_syrphids_treetype_summer %>% 
+#   mutate(Treetype = str_extract(Treetype,"[BOP]"))
+# rare_syrphids_treetype_summer$Treetype <- factor(rare_syrphids_treetype_summer$Treetype,
+#                               levels = c("B", "O", "P"))
+# rare_syrphids_treetype_summer <- rare_syrphids_treetype_summer %>% group_by(Treetype) %>% summarise_each(list(sum)) %>% column_to_rownames(., var = "Treetype")
+# 
+# S_s_tt_summer <- specnumber(rare_syrphids_treetype_summer)
+# raremax_s_tt_summer <- min(rowSums(rare_syrphids_treetype_summer)) 
+# Srare_s_tt_summer <- rarefy(rare_syrphids_treetype_summer, raremax_s_tt_summer)
+# 
+# par(mfrow = c(1,2))
+# plot(S_s_tt_summer, Srare_s_tt_summer, 
+#      xlab = "Observed No. of Species", 
+#      ylab = "Rarefied No. of Species",
+#      main = " plot(rarefy(Syrphids tree type summer, raremax))")
+# abline(0, 1)
+# rarecurve(rare_syrphids_treetype_summer, step = 20,
+#           sample = raremax_s_tt_summer,
+#           col = "blue",
+#           cex = 0.6,
+#           main = "rarecurve()")
+# 
+# #-----------------------------------------------------
+# #Pollinator
+# 
+# S_p <- specnumber(species_pollinator_nmds_clean_noempty)
+# raremax_p <- min(rowSums(species_pollinator_nmds_clean_noempty))
+# Srare_p <- rarefy(species_pollinator_nmds_clean_noempty, raremax_p)
+# 
+# par(mfrow = c(1,2))
+# plot(S_p, Srare_p, 
+#      xlab = "Observed No. of Species", 
+#      ylab = "Rarefied No. of Species",
+#      main = " plot(rarefy(Pollinators, raremax))")
+# abline(0, 1)
+# rarecurve(species_pollinator_nmds_clean_noempty, step = 20,
+#           sample = raremax_p,
+#           col = "blue",
+#           cex = 0.6,
+#           main = "rarecurve()")
+# 
+# rare_pollinator_treetype <- rownames_to_column(species_pollinator_nmds_clean_noempty)
+# colnames(rare_pollinator_treetype)[1] <- "Treetype"
+# rare_pollinator_treetype <- rare_pollinator_treetype %>% 
+#   mutate(Treetype = str_extract(Treetype,"[BOP]"))
+# rare_pollinator_treetype$Treetype <- factor(rare_pollinator_treetype$Treetype,
+#                               levels = c("B", "O", "P"))
+# rare_pollinator_treetype <- rare_pollinator_treetype %>% group_by(Treetype) %>% summarise_each(list(sum)) %>% column_to_rownames(., var = "Treetype")
+# 
+# S_p_tt <- specnumber(rare_pollinator_treetype)
+# raremax_p_tt <- min(rowSums(rare_pollinator_treetype)) 
+# Srare_p_tt <- rarefy(rare_pollinator_treetype, raremax_p_tt)
+# 
+# par(mfrow = c(1,2))
+# plot(S_p_tt, Srare_p_tt, 
+#      xlab = "Observed No. of Species", 
+#      ylab = "Rarefied No. of Species",
+#      main = " plot(rarefy(Pollinator tree type summer, raremax))")
+# abline(0, 1)
+# rarecurve(rare_pollinator_treetype, step = 20,
+#           sample = raremax_p_tt,
+#           col = "blue",
+#           cex = 0.6,
+#           main = "rarecurve()")
+# 
+# S_p_spring <- specnumber(species_pollinator_nmds_clean_noempty_spring)
+# raremax_p_spring <- min(rowSums(species_pollinator_nmds_clean_noempty_spring))
+# Srare_p_spring <- rarefy(species_pollinator_nmds_clean_noempty_spring, raremax_p_spring)
+# 
+# par(mfrow = c(1,2))
+# plot(S_p_spring, Srare_p_spring, 
+#      xlab = "Observed No. of Species", 
+#      ylab = "Rarefied No. of Species",
+#      main = " plot(rarefy(Pollinator spring, raremax))")
+# abline(0, 1)
+# rarecurve(species_pollinator_nmds_clean_noempty_spring, step = 20,
+#           #sample = raremax_p_spring,
+#           col = "blue",
+#           cex = 0.6,
+#           main = "rarecurve()")
+# 
+# rare_pollinator_treetype_spring <- rownames_to_column(species_pollinator_nmds_clean_noempty_spring)
+# colnames(rare_pollinator_treetype_spring)[1] <- "Treetype"
+# rare_pollinator_treetype_spring <- rare_pollinator_treetype_spring %>% 
+#   mutate(Treetype = str_extract(Treetype,"[BOP]"))
+# rare_pollinator_treetype_spring$Treetype <- factor(rare_pollinator_treetype_spring$Treetype,
+#                               levels = c("B", "O", "P"))
+# rare_pollinator_treetype_spring <- rare_pollinator_treetype_spring %>% group_by(Treetype) %>% summarise_each(list(sum)) %>% column_to_rownames(., var = "Treetype")
+# 
+# S_p_tt_spring <- specnumber(rare_pollinator_treetype_spring)
+# raremax_p_tt_spring <- min(rowSums(rare_pollinator_treetype_spring)) 
+# Srare_p_tt_spring <- rarefy(rare_pollinator_treetype_spring, raremax_p_tt_spring)
+# 
+# par(mfrow = c(1,2))
+# plot(S_p_tt_spring, Srare_p_tt_spring, 
+#      xlab = "Observed No. of Species", 
+#      ylab = "Rarefied No. of Species",
+#      main = " plot(rarefy(Syrphids tree type spring, raremax))")
+# abline(0, 1)
+# rarecurve(rare_pollinator_treetype_spring, step = 20,
+#           sample = raremax_p_tt_spring,
+#           col = "blue",
+#           cex = 0.6,
+#           main = "rarecurve()")
+# 
+# S_p_summer <- specnumber(species_pollinator_nmds_clean_noempty_summer)
+# raremax_p_summer <- min(rowSums(species_pollinator_nmds_clean_noempty_summer))
+# Srare_p_summer <- rarefy(species_pollinator_nmds_clean_noempty_summer, raremax_p_summer)
+# 
+# par(mfrow = c(1,2))
+# plot(S_p_summer, Srare_p_summer, 
+#      xlab = "Observed No. of Species", 
+#      ylab = "Rarefied No. of Species",
+#      main = " plot(rarefy(Pollinator summer, raremax))")
+# abline(0, 1)
+# rarecurve(species_pollinator_nmds_clean_noempty_summer, step = 20,
+#           #sample = raremax_p_summer,
+#           col = "blue",
+#           cex = 0.6,
+#           main = "rarecurve()")
+# 
+# rare_pollinator_treetype_summer <- rownames_to_column(species_pollinator_nmds_clean_noempty_summer)
+# colnames(rare_pollinator_treetype_summer)[1] <- "Treetype"
+# rare_pollinator_treetype_summer <- rare_pollinator_treetype_summer %>% 
+#   mutate(Treetype = str_extract(Treetype,"[BOP]"))
+# rare_pollinator_treetype_summer$Treetype <- factor(rare_pollinator_treetype_summer$Treetype,
+#                               levels = c("B", "O", "P"))
+# rare_pollinator_treetype_summer <- rare_pollinator_treetype_summer %>% group_by(Treetype) %>% summarise_each(list(sum)) %>% column_to_rownames(., var = "Treetype")
+# 
+# S_p_tt_summer <- specnumber(rare_pollinator_treetype_summer)
+# raremax_p_tt_summer <- min(rowSums(rare_pollinator_treetype_summer)) 
+# Srare_p_tt_summer <- rarefy(rare_pollinator_treetype_summer, raremax_p_tt_summer)
+# 
+# par(mfrow = c(1,2))
+# plot(S_p_tt_summer, Srare_p_tt_summer, 
+#      xlab = "Observed No. of Species", 
+#      ylab = "Rarefied No. of Species",
+#      main = " plot(rarefy(Pollinator tree type summer, raremax))")
+# abline(0, 1)
+# rarecurve(rare_pollinator_treetype_summer, step = 20,
+#           sample = raremax_p_tt_summer,
+#           col = "blue",
+#           cex = 0.6,
+#           main = "rarecurve()")
+# 
 # #Steven: aantallen per soort over alle bossen + sample size gelijk aan totaal aantal gevangen zweefvliegen
-# comm_s <- colSums(species_syrphids_nmds_clean_noempty)
-# raremax_s <- 184 #totaal aantal zweefvliegen
-# Srare_s <- rarefy(comm_s, raremax_s)
-# rarecurve(matrix(comm_s, nrow = 1), step = 1, sample = raremax_s, cex = 0.6)+ geom_text(title("Syrphids"))
-
-par(mfrow = c(1,2))
-plot(S_s, Srare_s, 
-     xlab = "Observed No. of Species", 
-     ylab = "Rarefied No. of Species",
-     main = " plot(rarefy(Syrphids, raremax))")
-abline(0, 1)
-rarecurve(species_syrphids_nmds_clean_noempty, step = 20,
-          sample = raremax_s,
-          col = "blue",
-          cex = 0.6,
-          main = "rarecurve()")
-
-rare_syrphids_treetype <- rownames_to_column(species_syrphids_nmds_clean_noempty)
-colnames(rare_syrphids_treetype)[1] <- "Treetype"
-rare_syrphids_treetype <- rare_syrphids_treetype %>% 
-  mutate(Treetype = str_extract(Treetype,"[BOP]"))
-rare_syrphids_treetype$Treetype <- factor(rare_syrphids_treetype$Treetype,
-                              levels = c("B", "O", "P"))
-rare_syrphids_treetype <- rare_syrphids_treetype %>% group_by(Treetype) %>% summarise_each(list(sum)) %>% column_to_rownames(., var = "Treetype")
-
-S_s_tt <- specnumber(rare_syrphids_treetype)
-raremax_s_tt <- min(rowSums(rare_syrphids_treetype)) 
-Srare_s_tt <- rarefy(rare_syrphids_treetype, raremax_b_tt)
-
-par(mfrow = c(1,2))
-plot(S_s_tt, Srare_s_tt, 
-     xlab = "Observed No. of Species", 
-     ylab = "Rarefied No. of Species",
-     main = " plot(rarefy(Bees tree type summer, raremax))")
-abline(0, 1)
-rarecurve(rare_syrphids_treetype, step = 20,
-          sample = raremax_s_tt,
-          col = "blue",
-          cex = 0.6,
-          main = "rarecurve()")
-
-S_s_spring <- specnumber(species_syrphids_nmds_clean_noempty_spring)
-raremax_s_spring <- min(rowSums(species_syrphids_nmds_clean_noempty_spring))
-Srare_s_spring <- rarefy(species_syrphids_nmds_clean_noempty_spring, raremax_s_spring)
-
-par(mfrow = c(1,2))
-plot(S_s_spring, Srare_s_spring, 
-     xlab = "Observed No. of Species", 
-     ylab = "Rarefied No. of Species",
-     main = " plot(rarefy(Syrphids spring, raremax))")
-abline(0, 1)
-rarecurve(species_syrphids_nmds_clean_noempty_spring, step = 20,
-          #sample = raremax_s_spring,
-          col = "blue",
-          cex = 0.6,
-          main = "rarecurve()")
-
-rare_syrphids_treetype_spring <- rownames_to_column(species_syrphids_nmds_clean_noempty_spring)
-colnames(rare_syrphids_treetype_spring)[1] <- "Treetype"
-rare_syrphids_treetype_spring <- rare_syrphids_treetype_spring %>% 
-  mutate(Treetype = str_extract(Treetype,"[BOP]"))
-rare_syrphids_treetype_spring$Treetype <- factor(rare_syrphids_treetype_spring$Treetype,
-                              levels = c("B", "O", "P"))
-rare_syrphids_treetype_spring <- rare_syrphids_treetype_spring %>% group_by(Treetype) %>% summarise_each(list(sum)) %>% column_to_rownames(., var = "Treetype")
-
-S_s_tt_spring <- specnumber(rare_syrphids_treetype_spring)
-raremax_s_tt_spring <- min(rowSums(rare_syrphids_treetype_spring)) 
-Srare_s_tt_spring <- rarefy(rare_syrphids_treetype_spring, raremax_s_tt_spring)
-
-par(mfrow = c(1,2))
-plot(S_s_tt_spring, Srare_s_tt_spring, 
-     xlab = "Observed No. of Species", 
-     ylab = "Rarefied No. of Species",
-     main = " plot(rarefy(Syrphids tree type spring, raremax))")
-abline(0, 1)
-rarecurve(rare_syrphids_treetype_spring, step = 20,
-          sample = raremax_s_tt_spring,
-          col = "blue",
-          cex = 0.6,
-          main = "rarecurve()")
-
-S_s_summer <- specnumber(species_syrphids_nmds_clean_noempty_summer)
-raremax_s_summer <- min(rowSums(species_syrphids_nmds_clean_noempty_summer))
-Srare_s_summer <- rarefy(species_syrphids_nmds_clean_noempty_summer, raremax_s_summer)
-
-par(mfrow = c(1,2))
-plot(S_s_summer, Srare_s_summer, 
-     xlab = "Observed No. of Species", 
-     ylab = "Rarefied No. of Species",
-     main = " plot(rarefy(Syrphids summer, raremax))")
-abline(0, 1)
-rarecurve(species_syrphids_nmds_clean_noempty_summer, step = 20,
-          #sample = raremax_s_summer,
-          col = "blue",
-          cex = 0.6,
-          main = "rarecurve()")
-
-rare_syrphids_treetype_summer <- rownames_to_column(species_syrphids_nmds_clean_noempty_summer)
-colnames(rare_syrphids_treetype_summer)[1] <- "Treetype"
-rare_syrphids_treetype_summer <- rare_syrphids_treetype_summer %>% 
-  mutate(Treetype = str_extract(Treetype,"[BOP]"))
-rare_syrphids_treetype_summer$Treetype <- factor(rare_syrphids_treetype_summer$Treetype,
-                              levels = c("B", "O", "P"))
-rare_syrphids_treetype_summer <- rare_syrphids_treetype_summer %>% group_by(Treetype) %>% summarise_each(list(sum)) %>% column_to_rownames(., var = "Treetype")
-
-S_s_tt_summer <- specnumber(rare_syrphids_treetype_summer)
-raremax_s_tt_summer <- min(rowSums(rare_syrphids_treetype_summer)) 
-Srare_s_tt_summer <- rarefy(rare_syrphids_treetype_summer, raremax_s_tt_summer)
-
-par(mfrow = c(1,2))
-plot(S_s_tt_summer, Srare_s_tt_summer, 
-     xlab = "Observed No. of Species", 
-     ylab = "Rarefied No. of Species",
-     main = " plot(rarefy(Syrphids tree type summer, raremax))")
-abline(0, 1)
-rarecurve(rare_syrphids_treetype_summer, step = 20,
-          sample = raremax_s_tt_summer,
-          col = "blue",
-          cex = 0.6,
-          main = "rarecurve()")
-
-#-----------------------------------------------------
-#Pollinator
-
-S_p <- specnumber(species_pollinator_nmds_clean_noempty)
-raremax_p <- min(rowSums(species_pollinator_nmds_clean_noempty))
-Srare_p <- rarefy(species_pollinator_nmds_clean_noempty, raremax_p)
-
-par(mfrow = c(1,2))
-plot(S_p, Srare_p, 
-     xlab = "Observed No. of Species", 
-     ylab = "Rarefied No. of Species",
-     main = " plot(rarefy(Pollinators, raremax))")
-abline(0, 1)
-rarecurve(species_pollinator_nmds_clean_noempty, step = 20,
-          sample = raremax_p,
-          col = "blue",
-          cex = 0.6,
-          main = "rarecurve()")
-
-rare_pollinator_treetype <- rownames_to_column(species_pollinator_nmds_clean_noempty)
-colnames(rare_pollinator_treetype)[1] <- "Treetype"
-rare_pollinator_treetype <- rare_pollinator_treetype %>% 
-  mutate(Treetype = str_extract(Treetype,"[BOP]"))
-rare_pollinator_treetype$Treetype <- factor(rare_pollinator_treetype$Treetype,
-                              levels = c("B", "O", "P"))
-rare_pollinator_treetype <- rare_pollinator_treetype %>% group_by(Treetype) %>% summarise_each(list(sum)) %>% column_to_rownames(., var = "Treetype")
-
-S_p_tt <- specnumber(rare_pollinator_treetype)
-raremax_p_tt <- min(rowSums(rare_pollinator_treetype)) 
-Srare_p_tt <- rarefy(rare_pollinator_treetype, raremax_p_tt)
-
-par(mfrow = c(1,2))
-plot(S_p_tt, Srare_p_tt, 
-     xlab = "Observed No. of Species", 
-     ylab = "Rarefied No. of Species",
-     main = " plot(rarefy(Pollinator tree type summer, raremax))")
-abline(0, 1)
-rarecurve(rare_pollinator_treetype, step = 20,
-          sample = raremax_p_tt,
-          col = "blue",
-          cex = 0.6,
-          main = "rarecurve()")
-
-S_p_spring <- specnumber(species_pollinator_nmds_clean_noempty_spring)
-raremax_p_spring <- min(rowSums(species_pollinator_nmds_clean_noempty_spring))
-Srare_p_spring <- rarefy(species_pollinator_nmds_clean_noempty_spring, raremax_p_spring)
-
-par(mfrow = c(1,2))
-plot(S_p_spring, Srare_p_spring, 
-     xlab = "Observed No. of Species", 
-     ylab = "Rarefied No. of Species",
-     main = " plot(rarefy(Pollinator spring, raremax))")
-abline(0, 1)
-rarecurve(species_pollinator_nmds_clean_noempty_spring, step = 20,
-          #sample = raremax_p_spring,
-          col = "blue",
-          cex = 0.6,
-          main = "rarecurve()")
-
-rare_pollinator_treetype_spring <- rownames_to_column(species_pollinator_nmds_clean_noempty_spring)
-colnames(rare_pollinator_treetype_spring)[1] <- "Treetype"
-rare_pollinator_treetype_spring <- rare_pollinator_treetype_spring %>% 
-  mutate(Treetype = str_extract(Treetype,"[BOP]"))
-rare_pollinator_treetype_spring$Treetype <- factor(rare_pollinator_treetype_spring$Treetype,
-                              levels = c("B", "O", "P"))
-rare_pollinator_treetype_spring <- rare_pollinator_treetype_spring %>% group_by(Treetype) %>% summarise_each(list(sum)) %>% column_to_rownames(., var = "Treetype")
-
-S_p_tt_spring <- specnumber(rare_pollinator_treetype_spring)
-raremax_p_tt_spring <- min(rowSums(rare_pollinator_treetype_spring)) 
-Srare_p_tt_spring <- rarefy(rare_pollinator_treetype_spring, raremax_p_tt_spring)
-
-par(mfrow = c(1,2))
-plot(S_p_tt_spring, Srare_p_tt_spring, 
-     xlab = "Observed No. of Species", 
-     ylab = "Rarefied No. of Species",
-     main = " plot(rarefy(Syrphids tree type spring, raremax))")
-abline(0, 1)
-rarecurve(rare_pollinator_treetype_spring, step = 20,
-          sample = raremax_p_tt_spring,
-          col = "blue",
-          cex = 0.6,
-          main = "rarecurve()")
-
-S_p_summer <- specnumber(species_pollinator_nmds_clean_noempty_summer)
-raremax_p_summer <- min(rowSums(species_pollinator_nmds_clean_noempty_summer))
-Srare_p_summer <- rarefy(species_pollinator_nmds_clean_noempty_summer, raremax_p_summer)
-
-par(mfrow = c(1,2))
-plot(S_p_summer, Srare_p_summer, 
-     xlab = "Observed No. of Species", 
-     ylab = "Rarefied No. of Species",
-     main = " plot(rarefy(Pollinator summer, raremax))")
-abline(0, 1)
-rarecurve(species_pollinator_nmds_clean_noempty_summer, step = 20,
-          #sample = raremax_p_summer,
-          col = "blue",
-          cex = 0.6,
-          main = "rarecurve()")
-
-rare_pollinator_treetype_summer <- rownames_to_column(species_pollinator_nmds_clean_noempty_summer)
-colnames(rare_pollinator_treetype_summer)[1] <- "Treetype"
-rare_pollinator_treetype_summer <- rare_pollinator_treetype_summer %>% 
-  mutate(Treetype = str_extract(Treetype,"[BOP]"))
-rare_pollinator_treetype_summer$Treetype <- factor(rare_pollinator_treetype_summer$Treetype,
-                              levels = c("B", "O", "P"))
-rare_pollinator_treetype_summer <- rare_pollinator_treetype_summer %>% group_by(Treetype) %>% summarise_each(list(sum)) %>% column_to_rownames(., var = "Treetype")
-
-S_p_tt_summer <- specnumber(rare_pollinator_treetype_summer)
-raremax_p_tt_summer <- min(rowSums(rare_pollinator_treetype_summer)) 
-Srare_p_tt_summer <- rarefy(rare_pollinator_treetype_summer, raremax_p_tt_summer)
-
-par(mfrow = c(1,2))
-plot(S_p_tt_summer, Srare_p_tt_summer, 
-     xlab = "Observed No. of Species", 
-     ylab = "Rarefied No. of Species",
-     main = " plot(rarefy(Pollinator tree type summer, raremax))")
-abline(0, 1)
-rarecurve(rare_pollinator_treetype_summer, step = 20,
-          sample = raremax_p_tt_summer,
-          col = "blue",
-          cex = 0.6,
-          main = "rarecurve()")
-
-#Steven: aantallen per soort over alle bossen + sample size gelijk aan totaal aantal gevangen zweefvliegen
-# comm_p <- colSums(species_pollinator_nmds_clean_noempty)
-# raremax_p <- 580 #totaal aantal pollinatoren
-# Srare_p <- rarefy(comm_p, raremax_p)
-# rarecurve(matrix(comm_p, nrow = 1), step = 1, sample = raremax_p, cex = 0.6)+ geom_text(title("Pollinators"))
+# # comm_p <- colSums(species_pollinator_nmds_clean_noempty)
+# # raremax_p <- 580 #totaal aantal pollinatoren
+# # Srare_p <- rarefy(comm_p, raremax_p)
+# # rarecurve(matrix(comm_p, nrow = 1), step = 1, sample = raremax_p, cex = 0.6)+ geom_text(title("Pollinators"))
 ```
+
 
 ```{r cleanup NMDS, echo=FALSE, warning=FALSE, message=FALSE}
 
